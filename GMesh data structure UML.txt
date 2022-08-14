@@ -1,0 +1,78 @@
+﻿GMesh (inspired by Blender BMesh and UnityBMesh)
+
+https://wiki.blender.org/wiki/Source/Modeling/BMesh/Design
+
+
+Thought: each struct with class wrapper?
+
+class Vertex
+{
+    struct VertexData
+    {
+        int index;
+        float3 pos;
+        int edgeIndex; // an index to the referenced struct for native enumeration
+    }
+    
+    GMesh mesh; // backref?
+    VertexData vertexData; // the data struct
+    Edge edge; // a class reference
+}
+
+
+Uses PlantUML (Rider plugin) to render UML graph:
+
+@startuml
+class GMesh
+{
+    List: verts, edges, loops, faces;
+    Add/RemoveVertex()
+    Add/RemoveEdge()
+    Add/RemoveFace()
+    FindEdge(v1, v2)
+}
+struct Vertex
+{
+    int index
+    float3 pos, normal
+    Edge e (index of e?)
+}
+struct Edge
+{
+    int index
+    Vertex v0, v1
+    Edge prev0, prev1
+    Edge next0, next1
+    Loop l (index of l?)
+}
+struct Loop
+{
+    (int index)
+    Vertex firstEdgeVertex
+    float2 uv0, uv1
+    Edge e
+    Face f
+    Loop radialPrev, radialNext  //around edge
+    Loop prev, next //around face
+}
+struct Face
+{
+    int index
+    Loop startLoop
+    int vertexCount //eq: loop, edge
+    float3 faceNormal
+    int materialIndex
+}
+
+GMesh --> Vertex
+GMesh --> Edge
+GMesh --> Loop
+GMesh --> Face
+Vertex }-- Edge
+Edge }--{ Edge
+Edge *--* Loop
+Loop }--{ Loop
+Loop }--{ Loop
+Loop x--> Vertex
+Loop *--* Face
+@enduml
