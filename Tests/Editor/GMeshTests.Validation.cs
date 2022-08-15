@@ -6,7 +6,21 @@ using NUnit.Framework;
 
 public sealed partial class GMeshTests
 {
-	private void AssertValidAllElements(bool assertVertexEdges = false, bool logElements = false)
+
+	private void CreateBMesh()
+	{
+		var bmesh = new BMesh();
+		bmesh.AddVertex(_triangleVertices[0]);
+		bmesh.AddVertex(_triangleVertices[1]);
+		bmesh.AddVertex(_triangleVertices[2]);
+		bmesh.AddEdge(2, 0);
+		bmesh.AddEdge(0, 1);
+		bmesh.AddEdge(1, 2);
+		bmesh.AddFace(0, 1, 2);
+		bmesh.DebugLogAllElements();
+	}
+	
+	private void AssertAllElementsAreValidAndCorrectlyRelated(bool assertVertexEdges = false, bool logElements = false)
 	{
 		if (logElements)
 			_gMesh.DebugLogAllElements();
@@ -108,33 +122,34 @@ public sealed partial class GMeshTests
 			GMesh.Vertex v0 = default, v1 = default;
 			Assert.DoesNotThrow(() => { v0 = _gMesh.GetVertex(edge.Vertex0Index); });
 			Assert.DoesNotThrow(() => { v1 = _gMesh.GetVertex(edge.Vertex1Index); });
-			Assert.AreEqual(edge.Index, v0.FirstEdgeIndex);
-			Assert.IsTrue(v1.FirstEdgeIndex >= 0 && v1.FirstEdgeIndex < edgeCount);
+			Assert.IsTrue(edge.Index == v0.BaseEdgeIndex || edge.Index == v1.BaseEdgeIndex);
+			Assert.IsTrue(v0.BaseEdgeIndex >= 0 && v0.BaseEdgeIndex < edgeCount);
+			Assert.IsTrue(v1.BaseEdgeIndex >= 0 && v1.BaseEdgeIndex < edgeCount);
 
 			if (assertVertexEdges)
 			{
-				Assert.IsTrue(edge.Vertex0PrevEdgeIndex >= 0 && edge.Vertex0PrevEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.Vertex0NextEdgeIndex >= 0 && edge.Vertex0NextEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.Vertex1PrevEdgeIndex >= 0 && edge.Vertex1PrevEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.Vertex1NextEdgeIndex >= 0 && edge.Vertex1NextEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.V0PrevRadialEdgeIndex >= 0 && edge.V0PrevRadialEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.V0NextRadialEdgeIndex >= 0 && edge.V0NextRadialEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.V1PrevRadialEdgeIndex >= 0 && edge.V1PrevRadialEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.V1NextRadialEdgeIndex >= 0 && edge.V1NextRadialEdgeIndex < edgeCount);
 
 				// TODO: verify these assumptions ...
 
 				GMesh.Edge v0PrevEdge = default;
-				Assert.DoesNotThrow(() => { v0PrevEdge = _gMesh.GetEdge(edge.Vertex0PrevEdgeIndex); });
-				Assert.AreEqual(edge.Index, v0PrevEdge.Vertex1NextEdgeIndex);
+				Assert.DoesNotThrow(() => { v0PrevEdge = _gMesh.GetEdge(edge.V0PrevRadialEdgeIndex); });
+				Assert.AreEqual(edge.Index, v0PrevEdge.V1NextRadialEdgeIndex);
 
 				GMesh.Edge v0NextEdge = default;
-				Assert.DoesNotThrow(() => { v0NextEdge = _gMesh.GetEdge(edge.Vertex0NextEdgeIndex); });
-				Assert.AreEqual(edge.Index, v0NextEdge.Vertex1PrevEdgeIndex);
+				Assert.DoesNotThrow(() => { v0NextEdge = _gMesh.GetEdge(edge.V0NextRadialEdgeIndex); });
+				Assert.AreEqual(edge.Index, v0NextEdge.V1PrevRadialEdgeIndex);
 
 				GMesh.Edge v1PrevEdge = default;
-				Assert.DoesNotThrow(() => { v1PrevEdge = _gMesh.GetEdge(edge.Vertex1PrevEdgeIndex); });
-				Assert.AreEqual(edge.Index, v1PrevEdge.Vertex0NextEdgeIndex);
+				Assert.DoesNotThrow(() => { v1PrevEdge = _gMesh.GetEdge(edge.V1PrevRadialEdgeIndex); });
+				Assert.AreEqual(edge.Index, v1PrevEdge.V0NextRadialEdgeIndex);
 
 				GMesh.Edge v1NextEdge = default;
-				Assert.DoesNotThrow(() => { v1NextEdge = _gMesh.GetEdge(edge.Vertex1NextEdgeIndex); });
-				Assert.AreEqual(edge.Index, v1NextEdge.Vertex0PrevEdgeIndex);
+				Assert.DoesNotThrow(() => { v1NextEdge = _gMesh.GetEdge(edge.V1NextRadialEdgeIndex); });
+				Assert.AreEqual(edge.Index, v1NextEdge.V0PrevRadialEdgeIndex);
 			}
 		}
 	}
@@ -144,12 +159,12 @@ public sealed partial class GMeshTests
 		var vertexCount = _gMesh.VertexCount;
 		for (var i = 0; i < vertexCount; i++)
 		{
-			var firstEdgeIndex = _gMesh.GetVertex(i).FirstEdgeIndex;
+			var firstEdgeIndex = _gMesh.GetVertex(i).BaseEdgeIndex;
 			Assert.IsTrue(firstEdgeIndex >= 0 && firstEdgeIndex < vertexCount);
 
 			GMesh.Edge edge = default;
 			Assert.DoesNotThrow(() => { edge = _gMesh.GetEdge(firstEdgeIndex); });
-			Assert.AreEqual(i, edge.Vertex0Index);
+			Assert.IsTrue(edge.IsAttachedToVertex(i));
 		}
 	}
 

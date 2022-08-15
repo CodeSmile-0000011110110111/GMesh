@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "CodeSmile.GMesh",
         "Unity.Collections",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "BMeshUnity"
     ],
     "includePlatforms": [
         "Editor"
