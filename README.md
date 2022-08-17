@@ -3,9 +3,21 @@ GMesh enables creating reliable geometry editing tools. It is a graph-based Mesh
 
 GMesh is developed to support "Mesh Graph", a node-based procedural geometry generator for Unity.
 
-GMesh is similar to [Blender's BMesh](https://wiki.blender.org/wiki/Source/Modeling/BMesh/Design) and [BMeshUnity](https://github.com/eliemichel/BMeshUnity) (incompatible with Job System). 
-
 Note: switch to "develop" branch to see latest work in progress.
+
+Simple code example:
+```
+var gmesh = new GMesh();
+gmesh.CreateFace(vertices);
+_meshFilter.sharedMesh = gmesh.ToMesh();
+gmesh.Dispose();
+```
+
+Where _vertices_ is any IEnumerable collection of 3 or more points (float3 or Vector3).
+
+## History
+
+GMesh is similar to [Blender's BMesh](https://wiki.blender.org/wiki/Source/Modeling/BMesh/Design) and [BMeshUnity](https://github.com/eliemichel/BMeshUnity) (incompatible with Job System). 
 
 ## Why not just edit Mesh vertices?
 
@@ -15,6 +27,6 @@ The key word is "easily". While you can do a lot of modifications to a Unity Mes
 
 ## Note on the Name "GMesh"
 
-"G" stands for "Graph" but also refers to "Geometry" and "General" because the primary purpose is to provide a reliably editable mesh data structure. In turn it cannot be rendered directly by Unity, a (fast) conversion to Mesh as a final step is required and will be included.
+"G" stands for "Graph" but could also refer to "Geometry" or "General" because the primary purpose is to provide a reliably editable mesh data structure. In turn it cannot be rendered directly by Unity, a (fast) conversion to Mesh as a final step is required and will be included.
 
 Since the "B" in BMesh stands for Blender I thought it better to use a different prefix, and since I am working on a Node Graph based visual mesh geometry editing tool called "Mesh Graph" and the data structure itself is sort of a static graph (or relational database) it came to be called "GMesh".
