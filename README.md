@@ -25,7 +25,7 @@ You cannot easily edit a Mesh knowing just about the vertices and triangles sinc
 
 The key word is "easily". While you can do a lot of modifications to a Unity Mesh, the operations (and the code needed to implement them) are a lot simpler and more reliable if the data structure allows you to work on faces and edges too.
 
-Just look at the simplicity and elegance of [Euler operators](https://en.wikipedia.org/wiki/Euler_operator_(digital_geometry) for mesh modifications that GMesh enables.
+Just look at the simplicity and elegance of [Euler operators](https://en.wikipedia.org/wiki/Euler_operator_(digital_geometry)) for mesh modifications that GMesh enables.
 
 ## Note on the Name "GMesh"
 
