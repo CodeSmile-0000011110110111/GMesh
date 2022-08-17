@@ -3,10 +3,10 @@
 
 using CodeSmile.GMesh;
 using NUnit.Framework;
+using UnityEngine;
 
 public sealed partial class GMeshTests
 {
-
 	private void CreateBMesh()
 	{
 		var bmesh = new BMesh();
@@ -19,7 +19,7 @@ public sealed partial class GMeshTests
 		bmesh.AddFace(0, 1, 2);
 		bmesh.DebugLogAllElements();
 	}
-	
+
 	private void AssertAllElementsAreValidAndCorrectlyRelated(bool assertVertexEdges = false, bool logElements = false)
 	{
 		if (logElements)
@@ -30,6 +30,13 @@ public sealed partial class GMeshTests
 		AssertValidEdgeElementIndices(assertVertexEdges);
 		AssertValidLoopElementIndices();
 		AssertValidFaceElementIndices();
+		AssertValidUnityMesh();
+	}
+
+	private void AssertValidUnityMesh()
+	{
+		Mesh mesh = null;
+		Assert.DoesNotThrow(() => { _gMesh.ToMesh(mesh); });
 	}
 
 	private void AssertValidFaceElementIndices()
@@ -38,7 +45,7 @@ public sealed partial class GMeshTests
 		for (var i = 0; i < faceCount; i++)
 		{
 			var face = _gMesh.GetFace(i);
-			Assert.IsTrue(face.FirstLoopIndex >= 0 && face.FirstLoopIndex < faceCount);
+			Assert.IsTrue(face.FirstLoopIndex >= 0 && face.FirstLoopIndex < _gMesh.LoopCount);
 
 			GMesh.Loop firstLoop = default;
 			Assert.DoesNotThrow(() => { firstLoop = _gMesh.GetLoop(face.FirstLoopIndex); });

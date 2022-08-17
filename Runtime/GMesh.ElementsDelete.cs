@@ -15,20 +15,12 @@ namespace CodeSmile.GMesh
 		/// <param name="faceIndex"></param>
 		public void DeleteFace(int faceIndex)
 		{
-			var face = GetFace(faceIndex);
-			Debug.Assert(face.IsValid);
-			
-			var loopIndex = face.FirstLoopIndex;
-			var nextLoopIndex = UnsetIndex;
-			
-			do
+			ForEachLoop(faceIndex, (loop) =>
 			{
-				var loop = GetLoop(loopIndex);
-				nextLoopIndex = loop.NextLoopIndex;
-				loop.FaceIndex = UnsetIndex; // detach loop from face, tells DeleteLoopFromFace that it's okay to delete the loop
+				// detach loop from face, thus DeleteLoopFromFace knows it's okay to delete the loop
+				loop.FaceIndex = UnsetIndex;
 				DeleteLoopInternal_DeleteDetachedLoop(loop);
-				loopIndex = nextLoopIndex;
-			} while (nextLoopIndex != face.FirstLoopIndex);
+			});
 
 			InvalidateFace(faceIndex);
 			RemoveInvalidatedElements();

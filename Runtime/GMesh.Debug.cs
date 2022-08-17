@@ -8,7 +8,7 @@ namespace CodeSmile.GMesh
 {
 	public sealed partial class GMesh
 	{
-		public override string ToString() => $"{GetType().Name} with {FaceCount} faces, {LoopCount} loops, {EdgeCount} edges, {VertexCount} vertices";
+		public override string ToString() => $"{GetType().Name} with {FaceCount} faces, {EdgeCount} edges, {VertexCount} vertices";
 
 		/// <summary>
 		/// Dump all elements for debugging purposes.

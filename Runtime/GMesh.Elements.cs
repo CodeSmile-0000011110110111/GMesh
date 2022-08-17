@@ -102,8 +102,8 @@ namespace CodeSmile.GMesh
 			public int NextLoopIndex; // loops around face
 			public int PrevRadialLoopIndex; // loops around edge
 			public int NextRadialLoopIndex; // loops around edge
-			public float2 vertex0UV;
-			public float2 vertex1UV;
+			public float2 UV;
+			public float2 UV1;
 
 			public void Invalidate() => Index = UnsetIndex;
 			public bool IsValid => Index != UnsetIndex;
