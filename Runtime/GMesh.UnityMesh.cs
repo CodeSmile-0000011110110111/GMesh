@@ -138,12 +138,10 @@ namespace CodeSmile.GMesh
 							if (innerCount % 2 == 0)
 								meshIndices.Add(firstVertexIndex);
 						}
-
-						innerFaceTriangleIndices.Clear();
 					}
 
-					innerFaceTriangleIndices.Dispose();
-					
+					innerFaceTriangleIndices.Clear();
+
 					// TEST summation of triangles
 					int tri = 1;
 					for (int i = 0; i < meshIndices.Length; i+=3)
@@ -177,6 +175,8 @@ namespace CodeSmile.GMesh
 						tri++;
 					}
 				}
+
+				innerFaceTriangleIndices.Dispose();
 
 				// HACK fix correct index count
 				var expectedIndexCount = (meshVertices.Length - 2) * 3;

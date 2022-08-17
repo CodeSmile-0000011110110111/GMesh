@@ -3,8 +3,6 @@ GMesh enables creating reliable geometry editing tools. It is a graph-based Mesh
 
 GMesh is developed to support "Mesh Graph", a node-based procedural geometry generator for Unity.
 
-Note: switch to "develop" branch to see latest work in progress.
-
 Simple code example:
 ```
 var gmesh = new GMesh();
@@ -14,6 +12,8 @@ gmesh.Dispose();
 ```
 
 Where _vertices_ is any IEnumerable collection of 3 or more points (float3 or Vector3).
+
+**NOTE: switch to "develop" branch to see latest work in progress.**
 
 ## History
 

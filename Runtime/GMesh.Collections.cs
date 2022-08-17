@@ -19,7 +19,7 @@ namespace CodeSmile.GMesh
 		private int _edgeCount;
 		private int _loopCount;
 		private int _faceCount;
-		
+
 		/// <summary>
 		/// Number of vertices in the mesh.
 		/// </summary>
@@ -47,8 +47,27 @@ namespace CodeSmile.GMesh
 		/// <value></value>
 		public bool IsDisposed => !(_vertices.IsCreated && _edges.IsCreated && _loops.IsCreated && _faces.IsCreated);
 
+		/// <summary>
+		/// Dispose of internal native collections.
+		/// Failure to call Dispose() in time will result in a big fat ugly Console error message.
+		/// Calling Dispose() more than once will throw an InvalidOperationException.
+		/// 
+		/// Note: native collections cannot be disposed of automatically in the Finalizer, see:
+		/// https://forum.unity.com/threads/why-disposing-nativearray-in-a-finalizer-is-unacceptable.531494/
+		/// </summary>
+		public void Dispose()
+		{
+			if (IsDisposed)
+				throw new InvalidOperationException("GMesh has already been disposed. Do not call Dispose() again!");
+
+			_vertices.Dispose();
+			_edges.Dispose();
+			_loops.Dispose();
+			_faces.Dispose();
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddVertex(Vertex vertex)
+		private int AddVertex(ref Vertex vertex)
 		{
 			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
 			vertex.Index = _vertices.Length;
@@ -58,7 +77,7 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddEdge(Edge edge)
+		private int AddEdge(ref Edge edge)
 		{
 			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
 			edge.Index = _edges.Length;
@@ -68,7 +87,7 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddLoop(Loop loop)
+		private int AddLoop(ref Loop loop)
 		{
 			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
 			loop.Index = _loops.Length;
@@ -78,7 +97,7 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddFace(Face face)
+		private int AddFace(ref Face face)
 		{
 			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
 			face.Index = _faces.Length;
@@ -187,25 +206,6 @@ namespace CodeSmile.GMesh
 		}
 
 		~GMesh() => OnFinalizeVerifyCollectionsAreDisposed();
-
-		/// <summary>
-		/// Dispose of internal native collections.
-		/// Failure to call Dispose() in time will result in a big fat ugly Console error message.
-		/// Calling Dispose() more than once will throw an InvalidOperationException.
-		/// 
-		/// Note: native collections cannot be disposed of automatically in the Finalizer, see:
-		/// https://forum.unity.com/threads/why-disposing-nativearray-in-a-finalizer-is-unacceptable.531494/
-		/// </summary>
-		public void Dispose()
-		{
-			if (IsDisposed)
-				throw new InvalidOperationException("GMesh has already been disposed. Do not call Dispose() again!");
-
-			_vertices.Dispose();
-			_edges.Dispose();
-			_loops.Dispose();
-			_faces.Dispose();
-		}
 
 		/// <summary>
 		/// This is the big fat ugly error message producer if user failed to call Dispose().

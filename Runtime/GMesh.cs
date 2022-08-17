@@ -36,7 +36,7 @@ namespace CodeSmile.GMesh
 	/// Note: Implementation closely follows Blender's BMesh and its C# port UnityBMesh (which is not Job System compatible).
 	/// </summary>
 	[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
-	public sealed partial class GMesh
+	public sealed partial class GMesh : IDisposable
 	{
 		/// <summary>
 		/// This is used to indicate that the index referencing another element hasn't been set yet.

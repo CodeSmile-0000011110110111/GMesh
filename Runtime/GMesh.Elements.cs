@@ -51,32 +51,48 @@ namespace CodeSmile.GMesh
 			public int LoopIndex;
 			public int Vertex0Index;
 			public int Vertex1Index;
-			public int V0PrevRadialEdgeIndex;
-			public int V0NextRadialEdgeIndex;
-			public int V1PrevRadialEdgeIndex;
-			public int V1NextRadialEdgeIndex;
+			public int V0PrevEdgeIndex;
+			public int V0NextEdgeIndex;
+			public int V1PrevEdgeIndex;
+			public int V1NextEdgeIndex;
+
+			public int this[int index]
+			{
+				get
+				{
+					if (index == 0)
+						return Vertex0Index;
+
+					return Vertex1Index;
+				}
+			}
 
 			public void Invalidate() => Index = UnsetIndex;
 			public bool IsValid => Index != UnsetIndex;
 
 			public override string ToString() => $"Edge [{Index}] with Verts [{Vertex0Index}, {Vertex1Index}], Loop [{LoopIndex}], " +
-			                                     $"V0 Edges [{V0PrevRadialEdgeIndex}, {V0NextRadialEdgeIndex}], " +
-			                                     $"V1 Edges [{V1PrevRadialEdgeIndex}, {V1NextRadialEdgeIndex}]";
+			                                     $"V0 Prev/Next [{V0PrevEdgeIndex}]<>[{V0NextEdgeIndex}], " +
+			                                     $"V1 Prev/Next [{V1PrevEdgeIndex}]<>[{V1NextEdgeIndex}]";
 
-			public bool IsAttachedToVertex(int vertexIndex) => vertexIndex == Vertex0Index || vertexIndex == Vertex1Index;
-			public int GetPrevRadialEdgeIndex(int vertexIndex) => vertexIndex == Vertex0Index ? V0PrevRadialEdgeIndex : V1PrevRadialEdgeIndex;
-			public int GetNextRadialEdgeIndex(int vertexIndex) => vertexIndex == Vertex0Index ? V0NextRadialEdgeIndex : V1NextRadialEdgeIndex;
+			public bool IsConnectedToVertex(int vertexIndex) => vertexIndex == Vertex0Index || vertexIndex == Vertex1Index;
+			public bool IsConnectingSameVertices(in Edge edge) => IsConnectingVertices(edge.Vertex0Index, edge.Vertex1Index);
 
-			public void SetPrevRadialEdgeIndex(int vertexIndex, int otherEdgeIndex)
+			public bool IsConnectingVertices(int v0Index, int v1Index) => (v0Index == Vertex0Index && v1Index == Vertex1Index) ||
+			                                                              (v0Index == Vertex1Index && v1Index == Vertex0Index);
+
+			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == Vertex0Index ? V0PrevEdgeIndex : V1PrevEdgeIndex;
+			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == Vertex0Index ? V0NextEdgeIndex : V1NextEdgeIndex;
+
+			public void SetPrevEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
-				if (vertexIndex == Vertex0Index) V0PrevRadialEdgeIndex = otherEdgeIndex;
-				else V1PrevRadialEdgeIndex = otherEdgeIndex;
+				if (vertexIndex == Vertex0Index) V0PrevEdgeIndex = otherEdgeIndex;
+				else V1PrevEdgeIndex = otherEdgeIndex;
 			}
 
-			public void SetNextRadialEdgeIndex(int vertexIndex, int otherEdgeIndex)
+			public void SetNextEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
-				if (vertexIndex == Vertex0Index) V0NextRadialEdgeIndex = otherEdgeIndex;
-				else V1NextRadialEdgeIndex = otherEdgeIndex;
+				if (vertexIndex == Vertex0Index) V0NextEdgeIndex = otherEdgeIndex;
+				else V1NextEdgeIndex = otherEdgeIndex;
 			}
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -85,8 +101,8 @@ namespace CodeSmile.GMesh
 				int vert1PrevEdgeIndex = UnsetIndex, int vert1NextEdgeIndex = UnsetIndex) => new()
 			{
 				Index = UnsetIndex, LoopIndex = loopIndex, Vertex0Index = vert0Index, Vertex1Index = vert1Index,
-				V0PrevRadialEdgeIndex = vert0PrevEdgeIndex, V0NextRadialEdgeIndex = vert0NextEdgeIndex,
-				V1PrevRadialEdgeIndex = vert1PrevEdgeIndex, V1NextRadialEdgeIndex = vert1NextEdgeIndex,
+				V0PrevEdgeIndex = vert0PrevEdgeIndex, V0NextEdgeIndex = vert0NextEdgeIndex,
+				V1PrevEdgeIndex = vert1PrevEdgeIndex, V1NextEdgeIndex = vert1NextEdgeIndex,
 			};
 		}
 
@@ -109,8 +125,8 @@ namespace CodeSmile.GMesh
 			public bool IsValid => Index != UnsetIndex;
 
 			public override string ToString() => $"Loop [{Index}] of Face [{FaceIndex}], Edge [{EdgeIndex}], Vertex [{VertexIndex}], " +
-			                                     $"Prev/Next Loop [{PrevLoopIndex}, {NextLoopIndex}], " +
-			                                     $"Prev/Next Radial [{PrevRadialLoopIndex}, {NextRadialLoopIndex}]";
+			                                     $"Prev/Next [{PrevLoopIndex}]<>[{NextLoopIndex}], " +
+			                                     $"Radial Prev/Next [{PrevRadialLoopIndex}]<>[{NextRadialLoopIndex}]";
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public static Loop Create(int faceIndex, int edgeIndex, int vertIndex,
@@ -136,7 +152,7 @@ namespace CodeSmile.GMesh
 			public void Invalidate() => Index = UnsetIndex;
 			public bool IsValid => Index != UnsetIndex;
 
-			public override string ToString() => $"Face [{Index}] has {ElementCount} verts, 1st Loop [{FirstLoopIndex}]";
+			public override string ToString() => $"Face [{Index}] has {ElementCount} verts/edges/loops, first Loop [{FirstLoopIndex}]";
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public static Face Create(int itemCount, int firstLoopIndex = UnsetIndex, int materialIndex = 0) => new()

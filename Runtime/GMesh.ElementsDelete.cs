@@ -174,9 +174,9 @@ namespace CodeSmile.GMesh
 			var v0 = GetVertex(edge.Vertex0Index);
 			if (edgeIndex == v0.BaseEdgeIndex)
 			{
-				if (edgeIndex != edge.V0NextRadialEdgeIndex)
+				if (edgeIndex != edge.V0NextEdgeIndex)
 				{
-					v0.BaseEdgeIndex = edge.V0NextRadialEdgeIndex;
+					v0.BaseEdgeIndex = edge.V0NextEdgeIndex;
 					SetVertex(v0);
 				}
 				else
@@ -189,9 +189,9 @@ namespace CodeSmile.GMesh
 			var v1 = GetVertex(edge.Vertex1Index);
 			if (edgeIndex == v1.BaseEdgeIndex)
 			{
-				if (edgeIndex != edge.V1NextRadialEdgeIndex)
+				if (edgeIndex != edge.V1NextEdgeIndex)
 				{
-					v1.BaseEdgeIndex = edge.V1NextRadialEdgeIndex;
+					v1.BaseEdgeIndex = edge.V1NextEdgeIndex;
 					SetVertex(v1);
 				}
 				else
@@ -209,31 +209,31 @@ namespace CodeSmile.GMesh
 		/// <param name="edge"></param>
 		private void DeleteEdgeInternal_UpdateEdgeCycle(in Edge edge)
 		{
-			var prev0Edge = GetEdge(edge.V0PrevRadialEdgeIndex);
+			var prev0Edge = GetEdge(edge.V0PrevEdgeIndex);
 			if (prev0Edge.IsValid)
 			{
-				prev0Edge.SetNextRadialEdgeIndex(edge.Vertex0Index, edge.V0NextRadialEdgeIndex);
+				prev0Edge.SetNextEdgeIndex(edge.Vertex0Index, edge.V0NextEdgeIndex);
 				SetEdge(prev0Edge);
 			}
 
-			var next0Edge = GetEdge(edge.V0NextRadialEdgeIndex);
+			var next0Edge = GetEdge(edge.V0NextEdgeIndex);
 			if (next0Edge.IsValid)
 			{
-				next0Edge.SetPrevRadialEdgeIndex(edge.Vertex0Index, edge.V0PrevRadialEdgeIndex);
+				next0Edge.SetPrevEdgeIndex(edge.Vertex0Index, edge.V0PrevEdgeIndex);
 				SetEdge(next0Edge);
 			}
 
-			var prev1Edge = GetEdge(edge.V1PrevRadialEdgeIndex);
+			var prev1Edge = GetEdge(edge.V1PrevEdgeIndex);
 			if (prev1Edge.IsValid)
 			{
-				prev1Edge.SetNextRadialEdgeIndex(edge.Vertex1Index, edge.V1NextRadialEdgeIndex);
+				prev1Edge.SetNextEdgeIndex(edge.Vertex1Index, edge.V1NextEdgeIndex);
 				SetEdge(prev1Edge);
 			}
 
-			var next1Edge = GetEdge(edge.V1NextRadialEdgeIndex);
+			var next1Edge = GetEdge(edge.V1NextEdgeIndex);
 			if (next1Edge.IsValid)
 			{
-				next1Edge.SetPrevRadialEdgeIndex(edge.Vertex1Index, edge.V1PrevRadialEdgeIndex);
+				next1Edge.SetPrevEdgeIndex(edge.Vertex1Index, edge.V1PrevEdgeIndex);
 				SetEdge(next1Edge);
 			}
 		}
