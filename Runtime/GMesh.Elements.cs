@@ -30,17 +30,18 @@ namespace CodeSmile.GMesh
 			public float3 Position;
 			public float3 Normal;
 
-			public void Invalidate() => Index = UnsetIndex;
 			public bool IsValid => Index != UnsetIndex;
+
+			public void Invalidate() => Index = UnsetIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public float3 GridPosition() => math.round(Position * InvGridSize) * GridSize;
 
-			public override string ToString() => $"Vertex [{Index}] at {Position}, base Edge [{BaseEdgeIndex}]";
-
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public static Vertex Create(float3 position, int baseEdgeIndex = UnsetIndex) => new()
 				{ Index = UnsetIndex, BaseEdgeIndex = baseEdgeIndex, Position = position, Normal = default };
+
+			public override string ToString() => $"Vertex [{Index}] at {Position}, base Edge [{BaseEdgeIndex}]";
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -56,6 +57,8 @@ namespace CodeSmile.GMesh
 			public int V1PrevEdgeIndex;
 			public int V1NextEdgeIndex;
 
+			public bool IsValid => Index != UnsetIndex;
+
 			public int this[int index]
 			{
 				get
@@ -67,33 +70,41 @@ namespace CodeSmile.GMesh
 				}
 			}
 
-			public void Invalidate() => Index = UnsetIndex;
-			public bool IsValid => Index != UnsetIndex;
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public int GetOtherVertexIndex(int vertexIndex) => vertexIndex == Vertex0Index ? Vertex1Index : Vertex0Index;
 
-			public override string ToString() => $"Edge [{Index}] with Verts [{Vertex0Index}, {Vertex1Index}], Loop [{LoopIndex}], " +
-			                                     $"V0 Prev/Next [{V0PrevEdgeIndex}]<>[{V0NextEdgeIndex}], " +
-			                                     $"V1 Prev/Next [{V1PrevEdgeIndex}]<>[{V1NextEdgeIndex}]";
-
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public bool IsConnectedToVertex(int vertexIndex) => vertexIndex == Vertex0Index || vertexIndex == Vertex1Index;
-			public bool IsConnectingSameVertices(in Edge edge) => IsConnectingVertices(edge.Vertex0Index, edge.Vertex1Index);
 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public bool IsConnectingVertices(int v0Index, int v1Index) => (v0Index == Vertex0Index && v1Index == Vertex1Index) ||
 			                                                              (v0Index == Vertex1Index && v1Index == Vertex0Index);
 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public bool IsDuplicateOf(in Edge edge) => IsConnectingVertices(edge.Vertex0Index, edge.Vertex1Index);
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == Vertex0Index ? V0PrevEdgeIndex : V1PrevEdgeIndex;
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == Vertex0Index ? V0NextEdgeIndex : V1NextEdgeIndex;
 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void SetPrevEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
 				if (vertexIndex == Vertex0Index) V0PrevEdgeIndex = otherEdgeIndex;
 				else V1PrevEdgeIndex = otherEdgeIndex;
 			}
 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void SetNextEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
 				if (vertexIndex == Vertex0Index) V0NextEdgeIndex = otherEdgeIndex;
 				else V1NextEdgeIndex = otherEdgeIndex;
 			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invalidate() => Index = UnsetIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public static Edge Create(int vert0Index, int vert1Index, int loopIndex = UnsetIndex,
@@ -104,6 +115,10 @@ namespace CodeSmile.GMesh
 				V0PrevEdgeIndex = vert0PrevEdgeIndex, V0NextEdgeIndex = vert0NextEdgeIndex,
 				V1PrevEdgeIndex = vert1PrevEdgeIndex, V1NextEdgeIndex = vert1NextEdgeIndex,
 			};
+
+			public override string ToString() => $"Edge [{Index}] with Verts [{Vertex0Index}, {Vertex1Index}], Loop [{LoopIndex}], " +
+			                                     $"V0 Prev/Next [{V0PrevEdgeIndex}]<>[{V0NextEdgeIndex}], " +
+			                                     $"V1 Prev/Next [{V1PrevEdgeIndex}]<>[{V1NextEdgeIndex}]";
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -121,12 +136,10 @@ namespace CodeSmile.GMesh
 			public float2 UV;
 			public float2 UV1;
 
-			public void Invalidate() => Index = UnsetIndex;
 			public bool IsValid => Index != UnsetIndex;
 
-			public override string ToString() => $"Loop [{Index}] of Face [{FaceIndex}], Edge [{EdgeIndex}], Vertex [{VertexIndex}], " +
-			                                     $"Prev/Next [{PrevLoopIndex}]<>[{NextLoopIndex}], " +
-			                                     $"Radial Prev/Next [{PrevRadialLoopIndex}]<>[{NextRadialLoopIndex}]";
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invalidate() => Index = UnsetIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public static Loop Create(int faceIndex, int edgeIndex, int vertIndex,
@@ -136,6 +149,10 @@ namespace CodeSmile.GMesh
 				PrevRadialLoopIndex = prevRadialLoopIndex, NextRadialLoopIndex = nextRadialLoopIndex,
 				PrevLoopIndex = prevLoopIndex, NextLoopIndex = nextLoopIndex,
 			};
+
+			public override string ToString() => $"Loop [{Index}] of Face [{FaceIndex}], Edge [{EdgeIndex}], Vertex [{VertexIndex}], " +
+			                                     $"Prev/Next [{PrevLoopIndex}]<>[{NextLoopIndex}], " +
+			                                     $"Radial Prev/Next [{PrevRadialLoopIndex}]<>[{NextRadialLoopIndex}]";
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -144,19 +161,21 @@ namespace CodeSmile.GMesh
 		{
 			public int Index;
 			public int FirstLoopIndex;
-			public int ElementCount; // = number of: vertices, loops, edges
+			public int ElementCount; // equals number of vertices, loops, edges
 			public int MaterialIndex;
 			public float3 Normal;
 			public Color Color;
 
-			public void Invalidate() => Index = UnsetIndex;
 			public bool IsValid => Index != UnsetIndex;
 
-			public override string ToString() => $"Face [{Index}] has {ElementCount} verts/edges/loops, first Loop [{FirstLoopIndex}]";
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invalidate() => Index = UnsetIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public static Face Create(int itemCount, int firstLoopIndex = UnsetIndex, int materialIndex = 0) => new()
 				{ Index = UnsetIndex, FirstLoopIndex = firstLoopIndex, ElementCount = itemCount, MaterialIndex = materialIndex };
+
+			public override string ToString() => $"Face [{Index}] has {ElementCount} verts, first Loop [{FirstLoopIndex}]";
 		}
 	}
 }

@@ -31,7 +31,7 @@ namespace CodeSmile.GMesh
 			var edgeIndices = CreateEdges(vertexIndices);
 			var face = Face.Create(vertexCount);
 			var faceIndex = AddFace(ref face);
-			CreateLoopsInternal(faceIndex, edgeIndices);
+			CreateLoopsInternal(faceIndex, edgeIndices, vertexIndices);
 
 			return faceIndex;
 		}
@@ -101,7 +101,7 @@ namespace CodeSmile.GMesh
 		public int CreateEdge(int v0Index, int v1Index)
 		{
 			// avoid edge duplication: if there is already an edge between edge[0] and edge[1] vertices, return existing edge instead
-			var existingEdgeIndex = FindExistingEdgeIndex(v0Index, v1Index);
+			var existingEdgeIndex = FindEdgeIndex(v0Index, v1Index);
 			if (existingEdgeIndex != UnsetIndex)
 				return existingEdgeIndex;
 
@@ -110,7 +110,7 @@ namespace CodeSmile.GMesh
 			CreateEdgeInternal_UpdateEdgeCycle(ref edge, v0Index, v1Index);
 			return edgeIndex;
 		}
-		
+
 		private void CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
 		{
 			var edgeIndex = edge.Index;
@@ -125,8 +125,9 @@ namespace CodeSmile.GMesh
 				}
 				else
 				{
+					var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
 					edge.V0PrevEdgeIndex = v0.BaseEdgeIndex;
-					edge.V0NextEdgeIndex = GetEdge(v0.BaseEdgeIndex).GetNextEdgeIndex(v0Index);
+					edge.V0NextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
 
 					var v0PrevEdge = GetEdge(edge.V0PrevEdgeIndex);
 					v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
@@ -135,6 +136,15 @@ namespace CodeSmile.GMesh
 					var v0NextEdge = GetEdge(edge.V0NextEdgeIndex);
 					v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
 					SetEdge(v0NextEdge);
+
+					// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
+					// This occurs when v0 and v1 were the first vertices to be connected with an edge.
+					var prevEdgeVertex0 = GetVertex(v0BaseEdge.Vertex0Index);
+					if (prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex)
+					{
+						v0.BaseEdgeIndex = edgeIndex;
+						SetVertex(v0);
+					}
 				}
 			}
 
@@ -143,14 +153,16 @@ namespace CodeSmile.GMesh
 				var v1 = GetVertex(v1Index);
 				if (v1.BaseEdgeIndex == UnsetIndex)
 				{
-					// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices
+					// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
+					// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
 					v1.BaseEdgeIndex = edge.V1PrevEdgeIndex = edge.V1NextEdgeIndex = edgeIndex;
 					SetVertex(v1);
 				}
 				else
 				{
+					var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
 					edge.V1PrevEdgeIndex = v1.BaseEdgeIndex;
-					edge.V1NextEdgeIndex = GetEdge(v1.BaseEdgeIndex).GetNextEdgeIndex(v1Index);
+					edge.V1NextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
 
 					var v1PrevEdge = GetEdge(edge.V1PrevEdgeIndex);
 					v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
@@ -235,23 +247,27 @@ namespace CodeSmile.GMesh
 			return vertIndices;
 		}
 
-		private void CreateLoopInternal(int faceIndex, int edgeIndex)
+		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
 		{
 			var newLoopIndex = LoopCount;
-			var (prevRadialIdx, nextRadialIdx, vertIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
+			var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
 			var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
-			var loop = Loop.Create(faceIndex, edgeIndex, vertIdx, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
+			var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
 			AddLoop(ref loop);
 		}
 
-		private void CreateLoopsInternal(int faceIndex, int[] edgeIndices)
+		private void CreateLoopsInternal(int faceIndex, int[] edgeIndices, IEnumerable<int> vertexIndices)
 		{
 			var edgeCount = edgeIndices.Length;
-			for (var i = 0; i < edgeCount; i++)
-				CreateLoopInternal(faceIndex, edgeIndices[i]);
+			var i = 0;
+			foreach (var vertexIndex in vertexIndices)
+			{
+				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndex);
+				i++;
+			}
 		}
 
-		private (int, int, int) CreateLoopInternal_UpdateRadialLoopCycle(int newLoopIndex, int edgeIndex)
+		private (int, int) CreateLoopInternal_UpdateRadialLoopCycle(int newLoopIndex, int edgeIndex)
 		{
 			var prevRadialLoopIndex = newLoopIndex;
 			var nextRadialLoopIndex = newLoopIndex;
@@ -275,7 +291,7 @@ namespace CodeSmile.GMesh
 
 			SetEdge(edge);
 
-			return (prevRadialLoopIndex, nextRadialLoopIndex, edge.Vertex0Index);
+			return (prevRadialLoopIndex, nextRadialLoopIndex);
 		}
 
 		private (int, int) CreateLoopInternal_UpdateLoopCycle(int newLoopIndex, int faceIndex)

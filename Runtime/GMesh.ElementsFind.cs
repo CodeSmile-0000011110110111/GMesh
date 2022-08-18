@@ -47,7 +47,7 @@ namespace CodeSmile.GMesh
 		/// </summary>
 		/// <param name="edge">Edge to check for, will be assigned to existing one.</param>
 		/// <returns>True if edge exists between v0 and v1. False if there is no edge connecting the two vertices.</returns>
-		public int FindExistingEdgeIndex(in Edge edge) => FindExistingEdgeIndex(edge.Vertex0Index, edge.Vertex1Index);
+		public int FindEdgeIndex(in Edge edge) => FindEdgeIndex(edge.Vertex0Index, edge.Vertex1Index);
 		
 		/// <summary>
 		/// Tries to find an existing edge connecting the two vertices (via their indices).
@@ -55,7 +55,7 @@ namespace CodeSmile.GMesh
 		/// <param name="v0Index">Index of one vertex</param>
 		/// <param name="v1Index">Index of another vertex</param>
 		/// <returns>True if edge exists between v0 and v1. False if there is no edge connecting the two vertices.</returns>
-		public int FindExistingEdgeIndex(int v0Index, int v1Index)
+		public int FindEdgeIndex(int v0Index, int v1Index)
 		{
 			// check all edges in cycle, return this edge's index if it points to v1
 			var existingEdgeIndex = UnsetIndex;

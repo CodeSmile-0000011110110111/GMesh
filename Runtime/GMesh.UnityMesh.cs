@@ -24,21 +24,19 @@ namespace CodeSmile.GMesh
 
 		public static bool IsClockwise(float3 p1, float3 p2, float3 p3)
 		{
-			bool isClockWise = true;
+			var isClockWise = true;
 
-			float determinant = p1.x * p2.y + p3.x * p1.y + p2.x * p3.y -
-			                    p1.x * p3.y - p3.x * p2.y - p2.x * p1.y;
+			var determinant = p1.x * p2.y + p3.x * p1.y + p2.x * p3.y -
+			                  p1.x * p3.y - p3.x * p2.y - p2.x * p1.y;
 			var determinant3d = math.determinant(new float3x3(p1, p2, p3));
 
 			if (determinant > 0f)
-			{
 				isClockWise = false;
-			}
 
 			return isClockWise;
 		}
-		
-		public Mesh ToMesh(Mesh mesh = null, int triangulationApproach = 0)
+
+		public Mesh ToMesh(Mesh mesh = null)
 		{
 			if (mesh == null)
 			{
@@ -58,7 +56,7 @@ namespace CodeSmile.GMesh
 
 			try
 			{
-				var innerFaceTriangleIndices = new NativeList<uint>(Allocator.TempJob);
+				//var innerFaceTriangleIndices = new NativeList<uint>(Allocator.TempJob);
 
 				var faceCount = FaceCount;
 				for (var faceIndex = 0; faceIndex < faceCount; faceIndex++)
@@ -67,28 +65,32 @@ namespace CodeSmile.GMesh
 					var totalVertexCount = face.ElementCount;
 					var firstVertexIndex = (uint)meshVertices.Length;
 					var currentVertex = (uint)0;
-					
-					if (totalVertexCount > 4)
-						Debug.LogWarning($"Note: Faces with more than 4 vertices have to be convex - no convex checks are performed");
 
-					if (true || triangulationApproach <= 0)
+					if (totalVertexCount > 4)
+						Debug.LogWarning("Note: Faces with more than 4 vertices have to be convex - no convex checks are performed");
+
 					{
 						// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
-						// => only certified to work with convex shapes
+						// => only guaranteed to work with convex shapes
 						ForEachLoop(faceIndex, loop =>
 						{
 							var loopVert = GetVertex(loop.VertexIndex);
 							if (currentVertex > 2)
 							{
-								meshIndices.Add((uint)firstVertexIndex);
-								meshIndices.Add((uint)(firstVertexIndex + currentVertex - 1));
+								// add extra fan triangles from first vertex to last vertex
+								meshIndices.Add(firstVertexIndex);
+								meshIndices.Add(firstVertexIndex + currentVertex - 1);
 							}
 
-							meshIndices.Add((uint)(firstVertexIndex + currentVertex));
+							meshIndices.Add(firstVertexIndex + currentVertex);
 							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, loopVert.Normal, loop.UV));
 							currentVertex++;
 						});
 					}
+
+
+					
+					/*
 					else if (triangulationApproach >= 1)
 					{
 						// Approach #2: triangles created in sequence, then gaps are closed
@@ -139,10 +141,12 @@ namespace CodeSmile.GMesh
 								meshIndices.Add(firstVertexIndex);
 						}
 					}
+					*/
 
-					innerFaceTriangleIndices.Clear();
+					//innerFaceTriangleIndices.Clear();
 
 					// TEST summation of triangles
+					/*
 					int tri = 1;
 					for (int i = 0; i < meshIndices.Length; i+=3)
 					{
@@ -174,18 +178,34 @@ namespace CodeSmile.GMesh
 						//Debug.Log($"Tri {tri} => Sum: {sum}, eN: {eNormal}, eNm: {math.csum(eNormal)}, w: {w}");
 						tri++;
 					}
+					*/
 				}
 
-				innerFaceTriangleIndices.Dispose();
+				//innerFaceTriangleIndices.Dispose();
 
-				// HACK fix correct index count
+				/*
+				// FIXME HACK: fix correct index count if something breaks
 				var expectedIndexCount = (meshVertices.Length - 2) * 3;
 				for (var i = meshIndices.Length; i < expectedIndexCount; i++)
 				{
 					Debug.LogWarning("FIXME: added missing index to prevent crash");
 					meshIndices.Add(0);
 				}
+				*/
 
+				/*
+				for (int i = 0; i < meshIndices.Length; i+=3)
+				{
+					var i0 = (int) meshIndices[i];
+					var i1 = (int)meshIndices[i+1];
+					var i2 = (int)meshIndices[i+2];
+					var v0 = meshVertices[i0].Position;
+					var v1 = meshVertices[i1].Position;
+					var v2 = meshVertices[i2].Position;
+					Debug.Log($"Tri: {i0}-{i1}-{i2} => {v0}-{v1}-{v2}");
+				}
+				*/
+				
 				//throw new Exception();
 
 				// VERTEX BUFFER

@@ -2,6 +2,7 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using UnityEngine;
@@ -37,6 +38,23 @@ namespace CodeSmile.GMesh
 		/// </summary>
 		public int FaceCount => _faceCount;
 
+		/// <summary>
+		/// The read-only collection of vertices.
+		/// </summary>
+		public NativeArray<Vertex>.ReadOnly Vertices => _vertices.AsParallelReader();
+		/// <summary>
+		/// The read-only collection of edges.
+		/// </summary>
+		public NativeArray<Edge>.ReadOnly Edges => _edges.AsParallelReader();
+		/// <summary>
+		/// The read-only collection of loops.
+		/// </summary>
+		public NativeArray<Loop>.ReadOnly Loops => _loops.AsParallelReader();
+		/// <summary>
+		/// The read-only collection of faces.
+		/// </summary>
+		public NativeArray<Face>.ReadOnly Faces => _faces.AsParallelReader();
+		
 		/// <summary>
 		/// Check if the GMesh needs disposing. For developers who get easily confused. :)
 		/// 

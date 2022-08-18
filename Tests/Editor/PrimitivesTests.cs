@@ -9,7 +9,7 @@ using Unity.Mathematics;
 public class PrimitivesTests
 {
 	[Test]
-	public void CreateQuad()
+	public void CreatePlane_1Quad()
 	{
 		var quadMesh = Primitives.Quad();
 		Assert.AreEqual(1, quadMesh.FaceCount);
@@ -19,7 +19,7 @@ public class PrimitivesTests
 	}
 	
 	[Test]
-	public void CreatePlane_TwoQuads()
+	public void CreatePlane_2Quads()
 	{
 		var planeMesh = Primitives.Plane(new PlaneParameters(new int2(2,3)));
 		planeMesh.DebugLogAllElements();
@@ -30,9 +30,10 @@ public class PrimitivesTests
 	}
 	
 	[Test]
-	public void CreatePlane_FourQuads()
+	public void CreatePlane_4Quads()
 	{
 		var planeMesh = Primitives.Plane(new PlaneParameters(new int2(3,3)));
+		planeMesh.DebugLogAllElements();
 		Assert.AreEqual(4, planeMesh.FaceCount);
 		Assert.AreEqual(16, planeMesh.LoopCount);
 		Assert.AreEqual(12, planeMesh.EdgeCount);
@@ -40,9 +41,10 @@ public class PrimitivesTests
 	}
 	
 	[Test]
-	public void CreatePlane_NineQuads()
+	public void CreatePlane_9Quads()
 	{
 		var planeMesh = Primitives.Plane(new PlaneParameters(new int2(4,4)));
+		planeMesh.DebugLogAllElements();
 		Assert.AreEqual(9, planeMesh.FaceCount);
 		Assert.AreEqual(36, planeMesh.LoopCount);
 		Assert.AreEqual(24, planeMesh.EdgeCount);
