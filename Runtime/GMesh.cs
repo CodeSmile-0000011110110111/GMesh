@@ -2,7 +2,9 @@
 // Usage is bound to the Unity Asset Store Terms of Service and EULA: https://unity3d.com/legal/as_terms
 
 using System;
+using System.Collections.Generic;
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace CodeSmile.GMesh
@@ -53,5 +55,68 @@ namespace CodeSmile.GMesh
 		/// The inverse of the grid, ie upscale factor before rounding. See GridSize.
 		/// </summary>
 		public const float InvGridSize = 1f / GridSize; // inverse of grid size (eg 0.001 => 1000)
+
+		/// <summary>
+		/// Creates a new GMesh instance with the contents of the input meshes.
+		/// Note: does not prevent creating duplicate faces.
+		/// </summary>
+		/// <param name="gMeshes">one or more GMesh instances to combine</param>
+		/// <param name="disposeInputMeshes">If true, Dispose() is called on each input mesh before returning to caller.</param>
+		public static GMesh Combine(IEnumerable<GMesh> gMeshes, bool disposeInputMeshes = false)
+		{
+			var newMesh = new GMesh();
+
+			var totalFaceCount = 0;
+			foreach (var mesh in gMeshes)
+				totalFaceCount += mesh.FaceCount;
+
+			var allFaceVertices = new GridVertex[totalFaceCount][];
+			var allFaceVertIndex = 0;
+
+			// get all vertices from all faces, use vertex GridPosition
+			foreach (var mesh in gMeshes)
+			{
+				foreach (var face in mesh.Faces)
+				{
+					if (face.IsValid == false)
+						continue;
+
+					var faceIndex = face.Index;
+					var i = 0;
+					var faceVertices = new GridVertex[face.ElementCount];
+					mesh.ForEachLoop(face, loop =>
+					{
+						// loop vertex is already in the correct winding order, regardless of edge orientation
+						faceVertices[i++] = new GridVertex(mesh.GetVertex(loop.VertexIndex), faceIndex);
+					});
+
+					allFaceVertices[allFaceVertIndex++] = faceVertices;
+				}
+			}
+
+			// TODO ...
+			throw new NotImplementedException("wip");
+			// remove vertex duplicates and patch new indices to face vert indices
+			var gridVertices = new NativeParallelHashMap<float3, GridVertex>(0, Allocator.Persistent);
+
+			// create all vertices with "no duplicates"
+			// create faces using updated vertex indices
+
+			if (disposeInputMeshes)
+			{
+				foreach (var mesh in gMeshes)
+				{
+					if (mesh != null && mesh.IsDisposed == false)
+						mesh.Dispose();
+				}
+			}
+
+			return newMesh;
+		}
+
+		/// <summary>
+		/// Create an empty GMesh.
+		/// </summary>
+		public GMesh() {}
 	}
 }

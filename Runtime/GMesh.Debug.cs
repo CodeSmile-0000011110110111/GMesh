@@ -53,7 +53,7 @@ namespace CodeSmile.GMesh
 				Debug.Log(GetVertex(i));
 		}
 
-		public void DebugDrawGizmos(Transform transform, DebugDrawElements drawElements = DebugDrawElements.Default)
+		public void DebugDrawGizmos(UnityEngine.Transform transform, DebugDrawElements drawElements = DebugDrawElements.Default)
 		{
 			var vertColor = Color.cyan;
 			var edgeColor = Color.yellow;
@@ -91,7 +91,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawVertexGizmos(Transform transform, GUIStyle style, float lineThickness = 5f)
+		public void DebugDrawVertexGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 5f)
 		{
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
@@ -119,11 +119,10 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawEdgeGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawEdgeGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
-			var prevNextFontSizeOffset = 4;
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
@@ -149,7 +148,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawEdgeCycleGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawEdgeCycleGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
@@ -209,7 +208,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawLoopGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawLoopGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
@@ -217,7 +216,6 @@ namespace CodeSmile.GMesh
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 			var loopBulge = 0.2f;
-			var prevNextFontSizeOffset = 4;
 
 			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var f in Faces)
@@ -271,7 +269,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawLoopCycleGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawLoopCycleGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
 			throw new NotImplementedException();
 
@@ -332,7 +330,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawFaceGizmos(Transform transform, GUIStyle style, float lineThickness = 3f)
+		public void DebugDrawFaceGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 3f)
 		{
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);

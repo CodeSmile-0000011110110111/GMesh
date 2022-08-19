@@ -1,0 +1,17 @@
+{
+    "name": "CodeSmile.GMesh.Examples",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c4c9b5f18e914f7d9f1c5112f02c0da4",
+        "GUID:d8b63aba1907145bea998dd612889d6b"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

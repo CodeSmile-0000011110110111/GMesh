@@ -2,9 +2,9 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace CodeSmile.GMesh
@@ -54,7 +54,7 @@ namespace CodeSmile.GMesh
 		/// The read-only collection of faces.
 		/// </summary>
 		public NativeArray<Face>.ReadOnly Faces => _faces.AsParallelReader();
-		
+
 		/// <summary>
 		/// Check if the GMesh needs disposing. For developers who get easily confused. :)
 		/// 
@@ -213,7 +213,6 @@ namespace CodeSmile.GMesh
 
 		private void RemoveInvalidatedElements()
 		{
-			
 			// TODO: we'll just leave the deleted elements as is for now
 			// perhaps we'll simply re-use them when adding new elements?
 
@@ -236,7 +235,7 @@ namespace CodeSmile.GMesh
 				// Make sure this doesn't go unnoticed! (I'd rather not throw an exception in the Finalizer)
 				Debug.LogError("=====================================================================");
 				Debug.LogError("=====================================================================");
-				Debug.LogError("GMesh: you forgot to call Dispose() on me before throwing me in the garbage! See the " +
+				Debug.LogError($"GMesh: you forgot to call Dispose() on {this}! See the " +
 				               "'A Native Collection has not been disposed, resulting in a memory leak.' error messages " +
 				               "above and/or below this message? That's because of not calling Dispose() on this GMesh instance.");
 				Debug.LogError("=====================================================================");

@@ -34,7 +34,7 @@ namespace CodeSmile.GMesh
 		 * split_face_make_edge, join_face_kill_edge and join_edge_kill_vert.
 		 * Returns true for success
 		 */
-		public bool JoinEdgesAndDeleteVertex(int edge0Index, int edge1Index) => throw new NotImplementedException();
+		public bool JoinEdgeAndDeleteVertex(int edge0Index, int edge1Index) => throw new NotImplementedException();
 
 		/*
 		 * SPLIT FACE MAKE EDGE:

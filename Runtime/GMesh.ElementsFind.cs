@@ -1,10 +1,28 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using System;
+
 namespace CodeSmile.GMesh
 {
 	public sealed partial class GMesh
 	{
+		/*
+		public int[] GetFaceVertexIndices(int faceIndex)
+		{
+			return GetFaceVertexIndices(GetFace(faceIndex));
+		}
+		
+		public int[] GetFaceVertexIndices(in Face face)
+		{
+			if (face.IsValid == false)
+				throw new ArgumentException($"face {face.Index} was invalidated");
+			
+			var indices = new int[face.ElementCount];
+			
+		}
+		*/
+			
 		/*
 		/// <summary>
 		/// Returns index of edge that connects the two vertices.

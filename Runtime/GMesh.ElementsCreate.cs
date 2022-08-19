@@ -40,10 +40,9 @@ namespace CodeSmile.GMesh
 		/// Creates a new face, along with its vertices, edges and loops by using the supplied vertex positions.
 		/// A face must have at least 3 vertices (triangle) but it can be any number of vertices.
 		/// 
-		/// Note: no check is performed to ensure the vertex positions all lie on the same plane. Upon triangulation
-		/// (convert to Unity Mesh) such a face would not be represented as a single plane.
+		/// Note: no check is performed to ensure the vertex positions all lie on the same plane. 
 		/// </summary>
-		/// <param name="vertexPositions">minimum of 3 (triangle) vertex positions in CLOCKWISE winding order</param>
+		/// <param name="vertexPositions">3 or more vertex positions in CLOCKWISE winding order</param>
 		/// <returns>the index of the new face</returns>
 		public int CreateFace(IEnumerable<float3> vertexPositions) => CreateFace(CreateVertices(vertexPositions));
 
@@ -218,7 +217,6 @@ namespace CodeSmile.GMesh
 		/// Note: It is up to the caller to set BaseEdgeIndex.
 		/// </summary>
 		/// <param name="position"></param>
-		/// <param name="normal"></param>
 		/// <returns>index of new vertex</returns>
 		public int CreateVertex(float3 position)
 		{

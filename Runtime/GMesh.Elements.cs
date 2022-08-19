@@ -1,6 +1,7 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Burst;
@@ -20,6 +21,28 @@ namespace CodeSmile.GMesh
 		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetEdge(in Edge e) => _edges[e.Index] = e;
 		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetLoop(in Loop l) => _loops[l.Index] = l;
 		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _faces[f.Index] = f;
+
+		[StructLayout(LayoutKind.Sequential)]
+		[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
+		internal struct GridVertex : IEquatable<float3>, IEquatable<GridVertex>
+		{
+			public int VertexIndex;
+			public int OwnerIndex;
+			public float3 GridPosition;
+
+			public GridVertex(in Vertex vertex, int ownerIndex)
+			{
+				VertexIndex = vertex.Index;
+				OwnerIndex = ownerIndex;
+				GridPosition = vertex.GridPosition();
+			}
+			public bool Equals(GridVertex other) => GridPosition.Equals(other.GridPosition);
+			public bool Equals(float3 other) => GridPosition.Equals(other);
+			public override bool Equals(object obj) => obj is GridVertex other && Equals(other);
+			public override int GetHashCode() => GridPosition.GetHashCode();
+			public static bool operator ==(GridVertex left, GridVertex right) => left.Equals(right);
+			public static bool operator !=(GridVertex left, GridVertex right) => !left.Equals(right);
+		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]

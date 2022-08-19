@@ -8,7 +8,7 @@ namespace CodeSmile.GMesh
 {
 	public static class Primitives
 	{
-		public static GMesh Quad() => Plane(new PlaneParameters(new int2(2)));
+		public static GMesh Quad() => Plane(new PlaneParameters(new int2(PlaneParameters.MinVertexCount), float3.zero, float3.zero));
 
 		public static GMesh Plane(PlaneParameters parameters)
 		{
@@ -20,7 +20,7 @@ namespace CodeSmile.GMesh
 			var vertices = new float3[vertexCount];
 
 			// create vertices
-			var scale = new float3(parameters.Scale, 1f);
+			var scale = new float3(parameters.Scale, GMesh.DefaultScale);
 			var centerOffset = new float3(.5f, .5f, 0f) * scale;
 			var step = 1f / new float3(subdivisions, 1f) * scale;
 			var vIndex = 0;
@@ -28,8 +28,8 @@ namespace CodeSmile.GMesh
 				for (var x = 0; x < parameters.VertexCountX; x++)
 					vertices[vIndex++] = new float3(x, y, 0f) * step - centerOffset;
 
-			var gmesh = new GMesh();
-			gmesh.CreateVertices(vertices);
+			var gMesh = new GMesh();
+			gMesh.CreateVertices(vertices);
 
 			// create quad faces
 			for (var y = 0; y < subdivisions.y; y++)
@@ -55,20 +55,28 @@ namespace CodeSmile.GMesh
 					//var uv01 = new float4(v0.x, v0.y, v1.x, v1.y);
 					//var uv23 = new float4(v2.x, v2.y, v3.x, v3.y);
 
-					gmesh.CreateFace(new[] { vi0, vi1, vi2, vi3 });
+					gMesh.CreateFace(new[] { vi0, vi1, vi2, vi3 });
 				}
 			}
 
-			var rot = quaternion.Euler(math.radians(parameters.Rotation));
-			gmesh.Transform(parameters.Translation, rot);
+			// Note: scale was applied to vertices earlier
+			var transform = new GMesh.Transform(parameters.Translation, parameters.Rotation, GMesh.DefaultScale);
+			//gMesh.Pivot = parameters.Pivot;
+			gMesh.ApplyTransform(transform);
 
-			return gmesh;
+			return gMesh;
 		}
 
-		private struct QuadInfo
+		public static GMesh Cube(CubeParameters parameters)
 		{
-			public float4 UV01;
-			public float4 UV23;
+			var vertexCount = new int3(parameters.VertexCountX, parameters.VertexCountY, parameters.VertexCountZ);
+			var b = Plane(new PlaneParameters(vertexCount.xy, new float3(0f, 0f, -0.5f), new float3(0f, 0f, 0f)));
+			var f = Plane(new PlaneParameters(vertexCount.xy, new float3(0f, 0f, 0.5f), new float3(0f, 180f, 0f)));
+			var l = Plane(new PlaneParameters(vertexCount.zy, new float3(-0.5f, 0f, 0f), new float3(0f, 90f, 0f)));
+			var r = Plane(new PlaneParameters(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
+			var u = Plane(new PlaneParameters(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
+			var d = Plane(new PlaneParameters(vertexCount.xz, new float3(0f, -0.5f, 0f), new float3(270f, 90f, 90f)));
+			return GMesh.Combine(new[] { b, f, l, r, u, d }, true);
 		}
 	}
 }
