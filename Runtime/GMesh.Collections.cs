@@ -213,6 +213,7 @@ namespace CodeSmile.GMesh
 
 		private void RemoveInvalidatedElements()
 		{
+			
 			// TODO: we'll just leave the deleted elements as is for now
 			// perhaps we'll simply re-use them when adding new elements?
 

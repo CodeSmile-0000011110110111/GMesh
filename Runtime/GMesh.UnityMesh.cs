@@ -86,6 +86,10 @@ namespace CodeSmile.GMesh
 							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, loopVert.Normal, loop.UV));
 							currentVertex++;
 						});
+						
+						// TODO: try triangle strip triangulation
+						// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
+						// https://en.wikipedia.org/wiki/Triangle_strip
 					}
 
 

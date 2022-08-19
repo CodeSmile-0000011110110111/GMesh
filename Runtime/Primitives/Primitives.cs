@@ -12,29 +12,26 @@ namespace CodeSmile.GMesh
 
 		public static GMesh Plane(PlaneParameters parameters)
 		{
-			if (parameters.VertexCount.x < 2 || parameters.VertexCount.y < 2)
+			if (parameters.VertexCountX < 2 || parameters.VertexCountY < 2)
 				throw new ArgumentException("minimum of 2 vertices per axis required");
 
-			var subdivisions = parameters.VertexCount - 1;
-			var vertexCount = parameters.VertexCount.x * parameters.VertexCount.y;
+			var subdivisions = new int2(parameters.VertexCountX - 1, parameters.VertexCountY - 1);
+			var vertexCount = parameters.VertexCountX * parameters.VertexCountY;
 			var vertices = new float3[vertexCount];
 
 			// create vertices
-			var step = 1f / new float3(subdivisions, 1f);
-			var vertexIndex = 0;
-			for (var y = 0; y < parameters.VertexCount.y; y++)
-			{
-				for (var x = 0; x < parameters.VertexCount.x; x++)
-				{
-					vertices[vertexIndex++] = new float3(x, y, 0f) * step;
-				}
-			}
+			var scale = new float3(parameters.Scale, 1f);
+			var centerOffset = new float3(.5f, .5f, 0f) * scale;
+			var step = 1f / new float3(subdivisions, 1f) * scale;
+			var vIndex = 0;
+			for (var y = 0; y < parameters.VertexCountY; y++)
+				for (var x = 0; x < parameters.VertexCountX; x++)
+					vertices[vIndex++] = new float3(x, y, 0f) * step - centerOffset;
 
 			var gmesh = new GMesh();
 			gmesh.CreateVertices(vertices);
 
 			// create quad faces
-			var centerOffset = new float3(.5f, .5f, 0f);
 			for (var y = 0; y < subdivisions.y; y++)
 			{
 				for (var x = 0; x < subdivisions.x; x++)
@@ -43,34 +40,27 @@ namespace CodeSmile.GMesh
 					// +z axis points towards the plane and plane normal is Vector3.back = (0,0,-1)
 
 					// calculate quad's vertex indices
-					var vi0 = y * parameters.VertexCount.x + x;
-					var vi1 = (y + 1) * parameters.VertexCount.x + x;
-					var vi2 = (y + 1) * parameters.VertexCount.x + x + 1;
-					var vi3 = y * parameters.VertexCount.x + x + 1;
+					var vi0 = y * parameters.VertexCountX + x;
+					var vi1 = (y + 1) * parameters.VertexCountX + x;
+					var vi2 = (y + 1) * parameters.VertexCountX + x + 1;
+					var vi3 = y * parameters.VertexCountX + x + 1;
 
-					// get the vertices
-					var v0 = vertices[vi0];
-					var v1 = vertices[vi1];
-					var v2 = vertices[vi2];
-					var v3 = vertices[vi3];
-					
 					// TODO: add UV to face
+					// get the vertices
+					//var v0 = vertices[vi0];
+					//var v1 = vertices[vi1];
+					//var v2 = vertices[vi2];
+					//var v3 = vertices[vi3];
 					// derive UV from vertices
-					var uv01 = new float4(v0.x, v0.y, v1.x, v1.y);
-					var uv23 = new float4(v2.x, v2.y, v3.x, v3.y);
-
-					// offset vertices 
-					// TODO: is this needed?
-					vertices[vi0] = v0 - centerOffset;
-					vertices[vi1] = v1 - centerOffset;
-					vertices[vi2] = v2 - centerOffset;
-					vertices[vi3] = v3 - centerOffset;
+					//var uv01 = new float4(v0.x, v0.y, v1.x, v1.y);
+					//var uv23 = new float4(v2.x, v2.y, v3.x, v3.y);
 
 					gmesh.CreateFace(new[] { vi0, vi1, vi2, vi3 });
 				}
 			}
-			
-			// TODO: apply transform
+
+			var rot = quaternion.Euler(math.radians(parameters.Rotation));
+			gmesh.Transform(parameters.Translation, rot);
 
 			return gmesh;
 		}

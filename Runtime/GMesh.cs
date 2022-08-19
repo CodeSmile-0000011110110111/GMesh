@@ -2,11 +2,8 @@
 // Usage is bound to the Unity Asset Store Terms of Service and EULA: https://unity3d.com/legal/as_terms
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Unity.Burst;
 using Unity.Mathematics;
-using UnityEngine;
 
 namespace CodeSmile.GMesh
 {

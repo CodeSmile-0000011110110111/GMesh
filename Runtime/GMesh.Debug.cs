@@ -10,7 +10,20 @@ namespace CodeSmile.GMesh
 {
 	public sealed partial class GMesh
 	{
-		public override string ToString() => $"{GetType().Name} with {FaceCount} faces, {EdgeCount} edges, {VertexCount} vertices";
+		[Flags]
+		public enum DebugDrawElements
+		{
+			Vertices = 1 << 0,
+			Edges = 1 << 1,
+			Loops = 1 << 2,
+			Faces = 1 << 3,
+			EdgeCycles = 1 << 4,
+			LoopCycles = 1 << 5,
+			
+			Default = Vertices | Edges | Faces,
+		}
+
+		public override string ToString() => $"{GetType().Name} with {FaceCount} faces, {EdgeCount} edges, {VertexCount} vertices, Pivot: {Pivot}, Centroid: {CalculateCentroid()}";
 
 		/// <summary>
 		/// Dump all elements for debugging purposes.
@@ -19,6 +32,15 @@ namespace CodeSmile.GMesh
 		{
 			if (string.IsNullOrWhiteSpace(headerMessage) == false)
 				Debug.Log(headerMessage);
+
+			var f = new float3();
+			f += new float3(1, 2, 3) / 1f;
+			f += new float3(1, 2, 3) / 2f;
+			f += new float3(1, 2, 3) / 3f;
+
+			var f2 = (new float3(1, 2, 3) + new float3(1, 2, 3) + new float3(1, 2, 3)) / 3f;
+			
+			Debug.Log($"same? {f} vs {f2}");
 
 			Debug.Log(this);
 			for (var i = 0; i < FaceCount; i++)
@@ -31,73 +53,112 @@ namespace CodeSmile.GMesh
 				Debug.Log(GetVertex(i));
 		}
 
+		public void DebugDrawGizmos(Transform transform, DebugDrawElements drawElements = DebugDrawElements.Default)
+		{
+			var vertColor = Color.cyan;
+			var edgeColor = Color.yellow;
+			var loopColor = Color.green;
+			var faceColor = Color.red;
+
+			var textStyle = new GUIStyle();
+			textStyle.alignment = TextAnchor.UpperCenter;
+			textStyle.normal.textColor = vertColor;
+			textStyle.fontSize = 14;
+
+			if (drawElements.HasFlag(DebugDrawElements.Vertices))
+				DebugDrawVertexGizmos(transform, textStyle);
+
+			textStyle.normal.textColor = edgeColor;
+			if (drawElements.HasFlag(DebugDrawElements.Edges))
+				DebugDrawEdgeGizmos(transform, textStyle);
+			if (drawElements.HasFlag(DebugDrawElements.EdgeCycles))
+				DebugDrawEdgeCycleGizmos(transform, textStyle);
+
+			textStyle.normal.textColor = loopColor;
+			if (drawElements.HasFlag(DebugDrawElements.Loops))
+				DebugDrawLoopGizmos(transform, textStyle);
+			if (drawElements.HasFlag(DebugDrawElements.LoopCycles))
+				DebugDrawLoopCycleGizmos(transform, textStyle);
+
+			textStyle.normal.textColor = faceColor;
+			if (drawElements.HasFlag(DebugDrawElements.Faces))
+				DebugDrawFaceGizmos(transform, textStyle);
+		}
+
 		/// <summary>
 		/// Draws vertex gizmos. Must be called from OnDrawGizmos().
 		/// </summary>
-		/// <param name="localPosition"></param>
+		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DrawVertexGizmos(float3 localPosition, GUIStyle style, float lineThickness = 5f)
+		public void DebugDrawVertexGizmos(Transform transform, GUIStyle style, float lineThickness = 5f)
 		{
-			var pos = localPosition;
+			var scale = (float3)transform.localScale;
+			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 
+			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var v in Vertices)
 			{
 				if (v.IsValid == false)
 					continue;
 
-				Handles.Label(pos + v.Position, v.Index.ToString(), style);
+				var vPos = math.transform(t, v.Position * scale);
+				Handles.Label(vPos, v.Index.ToString(), style);
 
-				var edgeCenter = CalculateEdgeCenter(v.BaseEdgeIndex);
-				Handles.DrawBezier(pos + v.Position, pos + edgeCenter, pos + v.Position, pos + edgeCenter, lineColor, null, lineThickness);
+				var edgeCenter = math.transform(t, CalculateEdgeCenter(v.BaseEdgeIndex) * scale);
+				Handles.DrawBezier(vPos, edgeCenter, vPos, edgeCenter, lineColor, null, lineThickness);
 			}
 		}
 
 		/// <summary>
 		/// Draws edge gizmos. Must be called from OnDrawGizmos().
 		/// </summary>
-		/// <param name="localPosition"></param>
+		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DrawEdgeGizmos(float3 localPosition, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawEdgeGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
-			var pos = localPosition;
+			var scale = (float3)transform.localScale;
+			var t = new RigidTransform(transform.rotation, transform.position);
 			var prevNextFontSizeOffset = 4;
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 
+			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var e in Edges)
 			{
 				if (e.IsValid == false)
 					continue;
 
-				var v0 = GetVertex(e.Vertex0Index).Position;
-				var v1 = GetVertex(e.Vertex1Index).Position;
-				Handles.DrawBezier(v0 + pos, v1 + pos, v0 + pos, v1 + pos, lineColor, null, lineThickness);
+				var v0 = math.transform(t, GetVertex(e.Vertex0Index).Position * scale);
+				var v1 = math.transform(t, GetVertex(e.Vertex1Index).Position * scale);
+				Handles.DrawBezier(v0, v1, v0, v1, lineColor, null, lineThickness);
 
 				var edgeCenter = CalculateCenter(v0, v1);
-				Handles.Label(edgeCenter + pos, e.Index.ToString(), style);
+				Handles.Label(edgeCenter, e.Index.ToString(), style);
 			}
 		}
 
 		/// <summary>
 		/// Draws edge cycle (prev/next) gizmos. Must be called from OnDrawGizmos().
 		/// </summary>
-		/// <param name="localPosition"></param>
+		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DrawEdgeCycleGizmos(float3 localPosition, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawEdgeCycleGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
-			var pos = localPosition;
+			var scale = (float3)transform.localScale;
+			var t = new RigidTransform(transform.rotation, transform.position);
 			var prevNextFontSizeOffset = 4;
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 
+			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var e in Edges)
 			{
 				if (e.IsValid == false)
@@ -108,36 +169,36 @@ namespace CodeSmile.GMesh
 				var v1NextEdge = GetEdge(e.V1NextEdgeIndex);
 				var v1PrevEdge = GetEdge(e.V1PrevEdgeIndex);
 
-				var v0 = GetVertex(e.Vertex0Index).Position;
-				var v1 = GetVertex(e.Vertex1Index).Position;
-				var edgeDir = v1 - v0;
+				var v0Pos = math.transform(t, GetVertex(e.Vertex0Index).Position * scale);
+				var v1Pos = math.transform(t, GetVertex(e.Vertex1Index).Position * scale);
 
 				var edgeCutOff = 0.22f;
-				var mainEdgeV0 = v0 + edgeDir * edgeCutOff;
-				var mainEdgeV1 = v1 - edgeDir * edgeCutOff;
-				Handles.DrawBezier(mainEdgeV0 + pos, mainEdgeV1 + pos, mainEdgeV0 + pos, mainEdgeV1 + pos, lineColor, null, lineThickness);
-				var edgeCenter = CalculateCenter(v0, v1);
-				Handles.Label(edgeCenter + pos, e.Index.ToString(), style);
+				var edgeDir = (v1Pos - v0Pos) * edgeCutOff;
+				var mainEdgeV0 = v0Pos + edgeDir;
+				var mainEdgeV1 = v1Pos - edgeDir;
+				Handles.DrawBezier(mainEdgeV0, mainEdgeV1, mainEdgeV0, mainEdgeV1, lineColor, null, lineThickness);
+				var edgeCenter = CalculateCenter(v0Pos, v1Pos);
+				Handles.Label(edgeCenter, e.Index.ToString(), style);
 
-				var toV0Prev = mainEdgeV0 + (CalculateEdgeCenter(v0PrevEdge) - mainEdgeV0) * edgeCutOff;
-				var toV0Next = mainEdgeV0 + (CalculateEdgeCenter(v0NextEdge) - mainEdgeV0) * edgeCutOff;
-				Handles.DrawBezier(mainEdgeV0 + pos, toV0Prev + pos, mainEdgeV0 + pos, toV0Prev + pos, lineColor, null, lineThickness);
-				Handles.DrawBezier(mainEdgeV0 + pos, toV0Next + pos, mainEdgeV0 + pos, toV0Next + pos, lineColor, null, lineThickness);
+				var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
+				var toV0Next = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0NextEdge) * scale) - mainEdgeV0) * edgeCutOff;
+				Handles.DrawBezier(mainEdgeV0, toV0Prev, mainEdgeV0, toV0Prev, lineColor, null, lineThickness);
+				Handles.DrawBezier(mainEdgeV0, toV0Next, mainEdgeV0, toV0Next, lineColor, null, lineThickness);
 
-				var toV1Prev = mainEdgeV1 + (CalculateEdgeCenter(v1PrevEdge) - mainEdgeV1) * edgeCutOff;
-				var toV1Next = mainEdgeV1 + (CalculateEdgeCenter(v1NextEdge) - mainEdgeV1) * edgeCutOff;
-				Handles.DrawBezier(mainEdgeV1 + pos, toV1Prev + pos, mainEdgeV1 + pos, toV1Prev + pos, lineColor, null, lineThickness);
-				Handles.DrawBezier(mainEdgeV1 + pos, toV1Next + pos, mainEdgeV1 + pos, toV1Next + pos, lineColor, null, lineThickness);
+				var toV1Prev = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1PrevEdge) * scale) - mainEdgeV1) * edgeCutOff;
+				var toV1Next = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1NextEdge) * scale) - mainEdgeV1) * edgeCutOff;
+				Handles.DrawBezier(mainEdgeV1, toV1Prev, mainEdgeV1, toV1Prev, lineColor, null, lineThickness);
+				Handles.DrawBezier(mainEdgeV1, toV1Next, mainEdgeV1, toV1Next, lineColor, null, lineThickness);
 
 				style.fontSize += -prevNextFontSizeOffset;
-				var textEdgeV0 = v0 + edgeDir * edgeCutOff * .5f;
-				var textEdgeV1 = v1 - edgeDir * edgeCutOff * .5f;
-				Handles.Label(textEdgeV0 + pos, "V0", style);
-				Handles.Label(textEdgeV1 + pos, "V1", style);
-				Handles.Label(toV0Prev + pos, $"<{e.V0PrevEdgeIndex}", style);
-				Handles.Label(toV0Next + pos, $"{e.V0NextEdgeIndex}>", style);
-				Handles.Label(toV1Prev + pos, $"<{e.V1PrevEdgeIndex}", style);
-				Handles.Label(toV1Next + pos, $"{e.V1NextEdgeIndex}>", style);
+				var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 3f;
+				var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 3f;
+				Handles.Label(textEdgeV0, "V0", style);
+				Handles.Label(textEdgeV1, "V1", style);
+				Handles.Label(toV0Prev, $"<{e.V0PrevEdgeIndex}", style);
+				Handles.Label(toV0Next, $"{e.V0NextEdgeIndex}>", style);
+				Handles.Label(toV1Prev, $"<{e.V1PrevEdgeIndex}", style);
+				Handles.Label(toV1Next, $"{e.V1NextEdgeIndex}>", style);
 				style.fontSize += prevNextFontSizeOffset;
 			}
 		}
@@ -145,47 +206,51 @@ namespace CodeSmile.GMesh
 		/// <summary>
 		/// Draws loop gizmos. Must be called from OnDrawGizmos().
 		/// </summary>
-		/// <param name="localPosition"></param>
+		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DrawLoopGizmos(float3 localPosition, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawLoopGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
-			var pos = localPosition;
+			var scale = (float3)transform.localScale;
+			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 			var loopBulge = 0.2f;
 			var prevNextFontSizeOffset = 4;
 
+			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var f in Faces)
 			{
 				if (f.IsValid == false)
 					continue;
 
-				var centroid = CalculateFaceCentroid(f);
+				var centroid = math.transform(t, CalculateFaceCentroid(f) * scale);
 
 				ForEachLoop(f, l =>
 				{
 					var e = GetEdge(l.EdgeIndex);
 					var vStartIndex = l.VertexIndex;
 					var vEndIndex = e.GetOtherVertexIndex(l.VertexIndex);
-					var vStart = GetVertex(vStartIndex).Position;
-					var vEnd = GetVertex(vEndIndex).Position;
+					var vStart = math.transform(t, GetVertex(vStartIndex).Position * scale);
+					var vEnd = math.transform(t, GetVertex(vEndIndex).Position * scale);
 
 					var tStart = vStart + (centroid - vStart) * loopBulge;
 					var tEnd = vEnd + (centroid - vEnd) * loopBulge;
-					Handles.DrawBezier(vStart + pos, vEnd + pos, tStart + pos, tEnd + pos, lineColor, null, lineThickness);
+					Handles.DrawBezier(vStart, vEnd, tStart, tEnd, lineColor, null, lineThickness);
 
 					var loopCenter = CalculateCenter(vStart, vEnd);
 					loopCenter += (centroid - loopCenter) * loopBulge;
-					Handles.Label(loopCenter + pos, $"{l.Index}", style);
+					Handles.Label(loopCenter, $"{l.Index}", style);
 
+					// mark the start of the loop 
 					if (f.FirstLoopIndex == l.Index)
 					{
 						var toCenter = vStart + (centroid - vStart) * .25f;
-						Handles.DrawBezier(toCenter + pos, vStart + pos, toCenter + pos, vStart + pos, lineColor, null, lineThickness + 4f);
+						Handles.DrawBezier(toCenter, vStart, toCenter, vStart, lineColor, null, lineThickness + 4f);
 					}
 
+					// TODO: draw prev/next?
 					/*
 					var aboveCenter = vStart + (vEnd - vStart) * (1f-loopBulge);
 					aboveCenter += (centroid - loopCenter) * loopBulge;
@@ -203,19 +268,21 @@ namespace CodeSmile.GMesh
 		/// <summary>
 		/// Draws radial loop gizmos. Must be called from OnDrawGizmos().
 		/// </summary>
-		/// <param name="localPosition"></param>
+		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DrawRadialLoopCycleGizmos(float3 localPosition, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawLoopCycleGizmos(Transform transform, GUIStyle style, float lineThickness = 2f)
 		{
 			throw new NotImplementedException();
-			var pos = localPosition;
+
+			var pos = (float3)transform.localPosition;
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 			var loopBulge = 0.2f;
 			var prevNextFontSizeOffset = 4;
 
+			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var f in Faces)
 			{
 				if (f.IsValid == false)
@@ -262,27 +329,29 @@ namespace CodeSmile.GMesh
 		/// <summary>
 		/// Draws face gizmos. Must be called from OnDrawGizmos().
 		/// </summary>
-		/// <param name="localPosition"></param>
+		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DrawFaceGizmos(float3 localPosition, GUIStyle style, float lineThickness = 3f)
+		public void DebugDrawFaceGizmos(Transform transform, GUIStyle style, float lineThickness = 3f)
 		{
-			var pos = localPosition;
+			var scale = (float3)transform.localScale;
+			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
 			var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 
+			Gizmos.matrix = transform.localToWorldMatrix;
 			foreach (var f in Faces)
 			{
 				if (f.IsValid == false)
 					continue;
 
-				var centroid = CalculateFaceCentroid(f);
+				var centroid = math.transform(t, CalculateFaceCentroid(f) * scale);
 				var firstLoop = GetLoop(f.FirstLoopIndex);
-				var vertex = GetVertex(firstLoop.VertexIndex).Position;
+				var vertex = math.transform(t, GetVertex(firstLoop.VertexIndex).Position * scale);
 
-				Handles.DrawBezier(centroid + pos, vertex + pos, centroid + pos, vertex + pos, lineColor, null, lineThickness);
-				Handles.Label(centroid + pos, $"{f.Index}", style);
+				Handles.DrawBezier(centroid, vertex, centroid, vertex, lineColor, null, lineThickness);
+				Handles.Label(centroid, $"{f.Index}", style);
 			}
 		}
 	}
