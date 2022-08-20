@@ -11,7 +11,7 @@ public class PrimitivesTests
 	[Test]
 	public void CreatePlane_1Quad()
 	{
-		var quadMesh = Primitives.Quad();
+		var quadMesh = GMesh.Quad();
 		Assert.AreEqual(1, quadMesh.FaceCount);
 		Assert.AreEqual(4, quadMesh.LoopCount);
 		Assert.AreEqual(4, quadMesh.EdgeCount);
@@ -21,7 +21,7 @@ public class PrimitivesTests
 	[Test]
 	public void CreatePlane_2Quads()
 	{
-		var planeMesh = Primitives.Plane(new PlaneParameters(new int2(2,3)));
+		var planeMesh = GMesh.Plane(new PlaneParameters(new int2(2,3)));
 		planeMesh.DebugLogAllElements();
 		Assert.AreEqual(2, planeMesh.FaceCount, "faces");
 		Assert.AreEqual(8, planeMesh.LoopCount, "loops");
@@ -32,7 +32,7 @@ public class PrimitivesTests
 	[Test]
 	public void CreatePlane_4Quads()
 	{
-		var planeMesh = Primitives.Plane(new PlaneParameters(new int2(3,3)));
+		var planeMesh = GMesh.Plane(new PlaneParameters(new int2(3,3)));
 		planeMesh.DebugLogAllElements();
 		Assert.AreEqual(4, planeMesh.FaceCount);
 		Assert.AreEqual(16, planeMesh.LoopCount);
@@ -43,7 +43,7 @@ public class PrimitivesTests
 	[Test]
 	public void CreatePlane_9Quads()
 	{
-		var planeMesh = Primitives.Plane(new PlaneParameters(new int2(4,4)));
+		var planeMesh = GMesh.Plane(new PlaneParameters(new int2(4,4)));
 		planeMesh.DebugLogAllElements();
 		Assert.AreEqual(9, planeMesh.FaceCount);
 		Assert.AreEqual(36, planeMesh.LoopCount);

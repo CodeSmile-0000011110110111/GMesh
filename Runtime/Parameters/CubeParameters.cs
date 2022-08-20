@@ -43,6 +43,7 @@ namespace CodeSmile.GMesh
 
 		public void Reset()
 		{
+			ResetToDefaults = false;
 			SetVertexCount(MinVertexCount);
 			Scale = GMesh.DefaultScale;
 		}

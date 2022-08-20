@@ -13,12 +13,13 @@ namespace CodeSmile.GMesh
 		[Flags]
 		public enum DebugDrawElements
 		{
-			Vertices = 1 << 0,
-			Edges = 1 << 1,
-			Loops = 1 << 2,
-			Faces = 1 << 3,
-			EdgeCycles = 1 << 4,
-			LoopCycles = 1 << 5,
+			Indices = 1 << 0,
+			Vertices = 1 << 1,
+			Edges = 1 << 2,
+			Loops = 1 << 3,
+			Faces = 1 << 4,
+			EdgeCycles = 1 << 5,
+			LoopCycles = 1 << 6,
 			
 			Default = Vertices | Edges | Faces,
 		}
@@ -63,26 +64,27 @@ namespace CodeSmile.GMesh
 			var textStyle = new GUIStyle();
 			textStyle.alignment = TextAnchor.UpperCenter;
 			textStyle.normal.textColor = vertColor;
-			textStyle.fontSize = 14;
+			textStyle.fontSize = 12;
 
+			var drawIndices = drawElements.HasFlag(DebugDrawElements.Indices);
 			if (drawElements.HasFlag(DebugDrawElements.Vertices))
-				DebugDrawVertexGizmos(transform, textStyle);
+				DebugDrawVertexGizmos(transform, textStyle, drawIndices);
 
 			textStyle.normal.textColor = edgeColor;
 			if (drawElements.HasFlag(DebugDrawElements.Edges))
-				DebugDrawEdgeGizmos(transform, textStyle);
+				DebugDrawEdgeGizmos(transform, textStyle, drawIndices);
 			if (drawElements.HasFlag(DebugDrawElements.EdgeCycles))
-				DebugDrawEdgeCycleGizmos(transform, textStyle);
+				DebugDrawEdgeCycleGizmos(transform, textStyle, drawIndices);
 
 			textStyle.normal.textColor = loopColor;
 			if (drawElements.HasFlag(DebugDrawElements.Loops))
-				DebugDrawLoopGizmos(transform, textStyle);
+				DebugDrawLoopGizmos(transform, textStyle, drawIndices);
 			if (drawElements.HasFlag(DebugDrawElements.LoopCycles))
-				DebugDrawLoopCycleGizmos(transform, textStyle);
+				DebugDrawLoopCycleGizmos(transform, textStyle, drawIndices);
 
 			textStyle.normal.textColor = faceColor;
 			if (drawElements.HasFlag(DebugDrawElements.Faces))
-				DebugDrawFaceGizmos(transform, textStyle);
+				DebugDrawFaceGizmos(transform, textStyle, drawIndices);
 		}
 
 		/// <summary>
@@ -91,8 +93,9 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawVertexGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 5f)
+		public void DebugDrawVertexGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
 		{
+			var lineThickness = 3f;
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
@@ -106,7 +109,8 @@ namespace CodeSmile.GMesh
 					continue;
 
 				var vPos = math.transform(t, v.Position * scale);
-				Handles.Label(vPos, v.Index.ToString(), style);
+				if (drawIndices)
+					Handles.Label(vPos, v.Index.ToString(), style);
 
 				var edgeCenter = math.transform(t, CalculateEdgeCenter(v.BaseEdgeIndex) * scale);
 				Handles.DrawBezier(vPos, edgeCenter, vPos, edgeCenter, lineColor, null, lineThickness);
@@ -119,8 +123,9 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawEdgeGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawEdgeGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
 		{
+			var lineThickness = 2f;
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
@@ -137,8 +142,11 @@ namespace CodeSmile.GMesh
 				var v1 = math.transform(t, GetVertex(e.OVertexIndex).Position * scale);
 				Handles.DrawBezier(v0, v1, v0, v1, lineColor, null, lineThickness);
 
-				var edgeCenter = CalculateCenter(v0, v1);
-				Handles.Label(edgeCenter, e.Index.ToString(), style);
+				if (drawIndices)
+				{
+					var edgeCenter = CalculateCenter(v0, v1);
+					Handles.Label(edgeCenter, e.Index.ToString(), style);
+				}
 			}
 		}
 
@@ -148,8 +156,9 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawEdgeCycleGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawEdgeCycleGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
 		{
+			float lineThickness = 2f;
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
 			var prevNextFontSizeOffset = 4;
@@ -176,8 +185,6 @@ namespace CodeSmile.GMesh
 				var mainEdgeV0 = v0Pos + edgeDir;
 				var mainEdgeV1 = v1Pos - edgeDir;
 				Handles.DrawBezier(mainEdgeV0, mainEdgeV1, mainEdgeV0, mainEdgeV1, lineColor, null, lineThickness);
-				var edgeCenter = CalculateCenter(v0Pos, v1Pos);
-				Handles.Label(edgeCenter, e.Index.ToString(), style);
 
 				var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
 				var toV0Next = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0NextEdge) * scale) - mainEdgeV0) * edgeCutOff;
@@ -189,16 +196,21 @@ namespace CodeSmile.GMesh
 				Handles.DrawBezier(mainEdgeV1, toV1Prev, mainEdgeV1, toV1Prev, lineColor, null, lineThickness);
 				Handles.DrawBezier(mainEdgeV1, toV1Next, mainEdgeV1, toV1Next, lineColor, null, lineThickness);
 
-				style.fontSize += -prevNextFontSizeOffset;
-				var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 3f;
-				var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 3f;
-				Handles.Label(textEdgeV0, "V0", style);
-				Handles.Label(textEdgeV1, "V1", style);
-				Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}", style);
-				Handles.Label(toV0Next, $"{e.ANextEdgeIndex}>", style);
-				Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}", style);
-				Handles.Label(toV1Next, $"{e.ONextEdgeIndex}>", style);
-				style.fontSize += prevNextFontSizeOffset;
+				if (drawIndices)
+				{
+					style.fontSize += -prevNextFontSizeOffset;
+					var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 3f;
+					var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 3f;
+					Handles.Label(textEdgeV0, "V0", style);
+					Handles.Label(textEdgeV1, "V1", style);
+					Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}", style);
+					Handles.Label(toV0Next, $"{e.ANextEdgeIndex}>", style);
+					Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}", style);
+					Handles.Label(toV1Next, $"{e.ONextEdgeIndex}>", style);
+					var edgeCenter = CalculateCenter(v0Pos, v1Pos);
+					Handles.Label(edgeCenter, e.Index.ToString(), style);
+					style.fontSize += prevNextFontSizeOffset;
+				}
 			}
 		}
 
@@ -208,8 +220,9 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawLoopGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawLoopGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
 		{
+			float lineThickness = 2f;
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
@@ -237,9 +250,12 @@ namespace CodeSmile.GMesh
 					var tEnd = vEnd + (centroid - vEnd) * loopBulge;
 					Handles.DrawBezier(vStart, vEnd, tStart, tEnd, lineColor, null, lineThickness);
 
-					var loopCenter = CalculateCenter(vStart, vEnd);
-					loopCenter += (centroid - loopCenter) * loopBulge;
-					Handles.Label(loopCenter, $"{l.Index}", style);
+					if (drawIndices)
+					{
+						var loopCenter = CalculateCenter(vStart, vEnd);
+						loopCenter += (centroid - loopCenter) * loopBulge;
+						Handles.Label(loopCenter, $"{l.Index}", style);
+					}
 
 					// mark the start of the loop 
 					if (f.FirstLoopIndex == l.Index)
@@ -269,10 +285,11 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawLoopCycleGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 2f)
+		public void DebugDrawLoopCycleGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
 		{
-			throw new NotImplementedException();
+			return;
 
+			var lineThickness = 2f;
 			var pos = (float3)transform.localPosition;
 			var txColor = style.normal.textColor;
 			var lineDarken = 0.5f;
@@ -300,9 +317,12 @@ namespace CodeSmile.GMesh
 					var tEnd = vEnd + (centroid - vEnd) * loopBulge;
 					Handles.DrawBezier(vStart + pos, vEnd + pos, tStart + pos, tEnd + pos, lineColor, null, lineThickness);
 
-					var loopCenter = CalculateCenter(vStart, vEnd);
-					loopCenter += (centroid - loopCenter) * loopBulge;
-					Handles.Label(loopCenter + pos, $"{l.Index}", style);
+					if (drawIndices)
+					{
+						var loopCenter = CalculateCenter(vStart, vEnd);
+						loopCenter += (centroid - loopCenter) * loopBulge;
+						Handles.Label(loopCenter + pos, $"{l.Index}", style);
+					}
 
 					if (f.FirstLoopIndex == l.Index)
 					{
@@ -330,8 +350,9 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawFaceGizmos(UnityEngine.Transform transform, GUIStyle style, float lineThickness = 3f)
+		public void DebugDrawFaceGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
 		{
+			float lineThickness = 3f;
 			var scale = (float3)transform.localScale;
 			var t = new RigidTransform(transform.rotation, transform.position);
 			var txColor = style.normal.textColor;
@@ -349,7 +370,8 @@ namespace CodeSmile.GMesh
 				var vertex = math.transform(t, GetVertex(firstLoop.StartVertexIndex).Position * scale);
 
 				Handles.DrawBezier(centroid, vertex, centroid, vertex, lineColor, null, lineThickness);
-				Handles.Label(centroid, $"{f.Index}", style);
+				if (drawIndices)
+					Handles.Label(centroid, $"{f.Index}", style);
 			}
 		}
 	}

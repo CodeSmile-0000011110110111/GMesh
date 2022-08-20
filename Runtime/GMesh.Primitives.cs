@@ -6,7 +6,7 @@ using Unity.Mathematics;
 
 namespace CodeSmile.GMesh
 {
-	public static class Primitives
+	public sealed partial class GMesh
 	{
 		public static GMesh Quad() => Plane(new PlaneParameters(new int2(PlaneParameters.MinVertexCount), float3.zero, float3.zero));
 
@@ -20,7 +20,7 @@ namespace CodeSmile.GMesh
 			var vertices = new float3[vertexCount];
 
 			// create vertices
-			var scale = new float3(parameters.Scale, GMesh.DefaultScale);
+			var scale = new float3(parameters.Scale, DefaultScale);
 			var centerOffset = new float3(.5f, .5f, 0f) * scale;
 			var step = 1f / new float3(subdivisions, 1f) * scale;
 			var vIndex = 0;
@@ -60,7 +60,7 @@ namespace CodeSmile.GMesh
 			}
 
 			// Note: scale was applied to vertices earlier
-			var transform = new GMesh.Transform(parameters.Translation, parameters.Rotation, GMesh.DefaultScale);
+			var transform = new Transform(parameters.Translation, parameters.Rotation, DefaultScale);
 			//gMesh.Pivot = parameters.Pivot;
 			gMesh.ApplyTransform(transform);
 
@@ -76,7 +76,7 @@ namespace CodeSmile.GMesh
 			var r = Plane(new PlaneParameters(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
 			var u = Plane(new PlaneParameters(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
 			var d = Plane(new PlaneParameters(vertexCount.xz, new float3(0f, -0.5f, 0f), new float3(270f, 90f, 90f)));
-			return GMesh.Combine(new[] { b, f, l, r, u, d }, disposeInputMeshes: true);
+			return Combine(new[] { b, f, l, r, u, d }, true);
 		}
 	}
 }

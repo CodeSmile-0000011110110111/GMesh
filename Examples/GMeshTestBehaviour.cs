@@ -97,8 +97,8 @@ public class GMeshTestBehaviour : MonoBehaviour
 
 	private GMesh CreatePrimitive() => _primitiveType switch
 	{
-		PrimitiveType.Plane => Primitives.Plane(_planeParameters),
-		PrimitiveType.Cube => Primitives.Cube(_cubeParameters),
+		PrimitiveType.Plane => GMesh.Plane(_planeParameters),
+		PrimitiveType.Cube => GMesh.Cube(_cubeParameters),
 		_ => throw new NotSupportedException(_primitiveType.ToString()),
 	};
 

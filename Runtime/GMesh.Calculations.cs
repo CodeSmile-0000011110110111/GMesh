@@ -71,5 +71,6 @@ namespace CodeSmile.GMesh
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public float3 CalculateCenter(float3 pos0, float3 pos1) => pos0 + (pos1 - pos0) * 0.5f;
+
 	}
 }
