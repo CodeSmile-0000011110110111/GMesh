@@ -2,26 +2,19 @@ using CodeSmile.GMesh;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using Tests.Editor;
 using Unity.Mathematics;
 
 [TestFixture]
-public sealed partial class GMeshTests
+public sealed class CreateDeleteTests
 {
-	private readonly float3[] _triangleVertices = { new(0f, 0f, 0f), new(1f, .1f, 1f), new(2f, 2f, 2f) };
-	private readonly float3[] _triangleVertices2 = { new(0f, 0f, 0f), new(-1f, -.1f, -1f), new(-2f, -2f, -2f) };
-	private readonly float3[] _quadVertices = { new(0f, 0f, 0f), new(1f, .1f, 1f), new(2f, .2f, 2f), new(3f, 3f, 3f) };
-	private readonly float3[] _pentagonVertices =
-		{ new(0f, 0f, 0f), new(1f, .1f, 1f), new(2f, .2f, 2f), new(3f, .3f, 3f), new(4f, 4f, 4f) };
-	private readonly float3[] _hexagonVertices =
-		{ new(0f, 0f, 0f), new(1f, .1f, 1f), new(2f, .2f, 2f), new(3f, .3f, 3f), new(4f, .4f, 4f), new(5f, 5f, 5f) };
-
 	private GMesh _gMesh;
 
 	[SetUp] public void SetUp() => _gMesh = new GMesh();
 	[TearDown] public void TearDown() => _gMesh?.Dispose();
 
 	[Test]
-	public void TryAddFacesWithNotEnoughVertices()
+	public void TryCreateFacesWithNotEnoughVertices()
 	{
 		Assert.Throws<ArgumentNullException>(() => { _gMesh.CreateFace(null as IEnumerable<float3>); });
 		Assert.Throws<ArgumentException>(() => { _gMesh.CreateFace(new float3[] {}); });
@@ -35,96 +28,79 @@ public sealed partial class GMeshTests
 	}
 
 	[Test]
-	public void DeleteVertex_OneTriangle()
+	public void DeleteVertex_1Triangle()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_triangleVertices); });
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.TriangleVertices); });
 
 		// this should clear the entire mesh from the bottom up
 		Assert.DoesNotThrow(() => { _gMesh.DeleteVertex(0); });
-		//_gMesh.DebugLogAllElements("AFTER DELETE");
-		Assert.AreEqual(0, _gMesh.FaceCount);
-		Assert.AreEqual(0, _gMesh.VertexCount);
-		Assert.AreEqual(0, _gMesh.EdgeCount);
-		Assert.AreEqual(0, _gMesh.LoopCount);
+		Validate.MeshElementCount(_gMesh, 0, 0, 0, 0);
 	}
 
 	[Test]
-	public void DeleteEdge_OneTriangle()
+	public void DeleteEdge_1Triangle()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_triangleVertices); });
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.TriangleVertices); });
 
 		// this should clear the entire mesh from the bottom up
 		Assert.DoesNotThrow(() => { _gMesh.DeleteEdge(0); });
-		//_gMesh.DebugLogAllElements("AFTER DELETE");
-		Assert.AreEqual(0, _gMesh.FaceCount);
-		Assert.AreEqual(0, _gMesh.VertexCount);
-		Assert.AreEqual(0, _gMesh.EdgeCount);
-		Assert.AreEqual(0, _gMesh.LoopCount);
+		Validate.MeshElementCount(_gMesh, 0, 0, 0, 0);
 	}
 
 	[Test]
-	public void DeleteFace_OneTriangle()
+	public void DeleteFace_1Triangle()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_triangleVertices); });
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.TriangleVertices); });
 
 		// this should clear the entire mesh "face down"
 		Assert.DoesNotThrow(() => { _gMesh.DeleteFace(0); });
-		//_gMesh.DebugLogAllElements("AFTER DELETE");
-		Assert.AreEqual(0, _gMesh.FaceCount);
-		Assert.AreEqual(0, _gMesh.VertexCount);
-		Assert.AreEqual(0, _gMesh.EdgeCount);
-		Assert.AreEqual(0, _gMesh.LoopCount);
+		Validate.MeshElementCount(_gMesh, 0, 0, 0, 0);
 	}
 
 	[Test]
-	public void AddVertsThenFace_OneTriangle()
+	public void CreateVertsThenFace_1Triangle()
 	{
 		int[] vertIndices = default;
-		Assert.DoesNotThrow(() => { vertIndices = _gMesh.CreateVertices(_triangleVertices); });
+		Assert.DoesNotThrow(() => { vertIndices = _gMesh.CreateVertices(Constants.TriangleVertices); });
 		Assert.DoesNotThrow(() => { _gMesh.CreateFace(vertIndices); });
-		Assert.AreEqual(1, _gMesh.FaceCount);
-		Assert.AreEqual(_triangleVertices.Length, _gMesh.VertexCount);
-		Assert.AreEqual(_triangleVertices.Length, _gMesh.EdgeCount);
-		Assert.AreEqual(_triangleVertices.Length, _gMesh.LoopCount);
+		var elementCount = Constants.TriangleVertices.Length;
+		Validate.MeshElementCount(_gMesh, 1, elementCount, elementCount, elementCount);
 		Validate.AllElementsAndRelations(_gMesh);
 	}
-	
+
 	[Test]
-	public void AddVertsThenFace_TwoTriangles()
+	public void CreateVertsThenFace_2Triangles()
 	{
 		int[] vertIndices = default;
 		int[] vertIndices2 = default;
-		Assert.DoesNotThrow(() => { vertIndices = _gMesh.CreateVertices(_triangleVertices); });
-		Assert.DoesNotThrow(() => { vertIndices2 = _gMesh.CreateVertices(_triangleVertices2); });
+		Assert.DoesNotThrow(() => { vertIndices = _gMesh.CreateVertices(Constants.TriangleVertices); });
+		Assert.DoesNotThrow(() => { vertIndices2 = _gMesh.CreateVertices(Constants.TriangleVertices2); });
 		Assert.DoesNotThrow(() => { _gMesh.CreateFace(vertIndices); });
 		Assert.DoesNotThrow(() => { _gMesh.CreateFace(vertIndices2); });
-		Assert.AreEqual(2, _gMesh.FaceCount);
-		Assert.AreEqual(_triangleVertices.Length + _triangleVertices2.Length, _gMesh.VertexCount);
-		Assert.AreEqual(_triangleVertices.Length + _triangleVertices2.Length, _gMesh.EdgeCount);
-		Assert.AreEqual(_triangleVertices.Length + _triangleVertices2.Length, _gMesh.LoopCount);
+		var elementCount = Constants.TriangleVertices.Length + Constants.TriangleVertices2.Length;
+		Validate.MeshElementCount(_gMesh, 2, elementCount, elementCount, elementCount);
 		Validate.AllElementsAndRelations(_gMesh);
 	}
 
 	[Test]
-	public void AddVertsThenFace_OneQuad()
+	public void CreateVertsThenFace_1Quad()
 	{
 		int[] vertIndices = default;
-		Assert.DoesNotThrow(() => { vertIndices = _gMesh.CreateVertices(_quadVertices); });
+		Assert.DoesNotThrow(() => { vertIndices = _gMesh.CreateVertices(Constants.QuadVertices); });
 		Assert.DoesNotThrow(() => { _gMesh.CreateFace(vertIndices); });
-		Assert.AreEqual(_quadVertices.Length, _gMesh.VertexCount);
+		var elementCount = Constants.QuadVertices.Length;
+		Validate.MeshElementCount(_gMesh, 1, elementCount, elementCount, elementCount);
 		Validate.AllElementsAndRelations(_gMesh);
 	}
 
 	[Test]
-	public void AddFace_OneTriangle()
+	public void CreateFace_1Triangle()
 	{
-		Validate.CreateBMeshForComparison(_triangleVertices);
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_triangleVertices); });
-		_gMesh.DebugLogAllElements();
-		Assert.AreEqual(1, _gMesh.FaceCount);
-		Assert.AreEqual(_triangleVertices.Length, _gMesh.VertexCount);
-		Assert.AreEqual(_triangleVertices.Length, _gMesh.EdgeCount);
-		Assert.AreEqual(_triangleVertices.Length, _gMesh.LoopCount);
+		Validate.CreateBMeshForComparison(Constants.TriangleVertices);
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.TriangleVertices); });
+		//_gMesh.DebugLogAllElements();
+		var elementCount = Constants.TriangleVertices.Length;
+		Validate.MeshElementCount(_gMesh, 1, elementCount, elementCount, elementCount);
 		Assert.AreEqual(2, _gMesh.GetEdge(0).APrevEdgeIndex);
 		Assert.AreEqual(2, _gMesh.GetEdge(0).ANextEdgeIndex);
 		Assert.AreEqual(1, _gMesh.GetEdge(0).OPrevEdgeIndex);
@@ -144,11 +120,12 @@ public sealed partial class GMeshTests
 	}
 
 	[Test]
-	public void AddFace_OneQuad()
+	public void CreateFace_1Quad()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_quadVertices); });
-		_gMesh.DebugLogAllElements();
-		Assert.AreEqual(_quadVertices.Length, _gMesh.VertexCount);
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.QuadVertices); });
+		//_gMesh.DebugLogAllElements();
+		var elementCount = Constants.QuadVertices.Length;
+		Validate.MeshElementCount(_gMesh, 1, elementCount, elementCount, elementCount);
 		Assert.AreEqual(3, _gMesh.GetEdge(0).APrevEdgeIndex);
 		Assert.AreEqual(3, _gMesh.GetEdge(0).ANextEdgeIndex);
 		Assert.AreEqual(1, _gMesh.GetEdge(0).OPrevEdgeIndex);
@@ -173,33 +150,32 @@ public sealed partial class GMeshTests
 	}
 
 	[Test]
-	public void AddFace_OnePentagon()
+	public void CreateFace_1Pentagon()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_pentagonVertices); });
-		Assert.AreEqual(_pentagonVertices.Length, _gMesh.VertexCount);
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.PentagonVertices); });
+		var elementCount = Constants.PentagonVertices.Length;
+		Validate.MeshElementCount(_gMesh, 1, elementCount, elementCount, elementCount);
 		Validate.AllElementsAndRelations(_gMesh);
 	}
 
 	[Test]
-	public void AddFace_OneHexagon()
+	public void CreateFace_1Hexagon()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_hexagonVertices); });
-		Assert.AreEqual(_hexagonVertices.Length, _gMesh.VertexCount);
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.HexagonVertices); });
+		var elementCount = Constants.HexagonVertices.Length;
+		Validate.MeshElementCount(_gMesh, 1, elementCount, elementCount, elementCount);
 		Validate.AllElementsAndRelations(_gMesh);
 	}
-	
-	
+
 	[Test]
-	public void AddFaces_TwoTriangles()
+	public void CreateFaces_2Triangles()
 	{
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_triangleVertices); });
-		Assert.DoesNotThrow(() => { _gMesh.CreateFace(_triangleVertices2); });
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.TriangleVertices); });
+		Assert.DoesNotThrow(() => { _gMesh.CreateFace(Constants.TriangleVertices2); });
 		//_gMesh.DebugLogAllElements("TWO TRIANGLES");
 
-		Assert.AreEqual(2, _gMesh.FaceCount);
-		Assert.AreEqual(_triangleVertices.Length + _triangleVertices2.Length, _gMesh.VertexCount);
-		Assert.AreEqual(_triangleVertices.Length + _triangleVertices2.Length, _gMesh.EdgeCount);
-		Assert.AreEqual(_triangleVertices.Length + _triangleVertices2.Length, _gMesh.LoopCount);
+		var elementCount = Constants.TriangleVertices.Length + Constants.TriangleVertices2.Length;
+		Validate.MeshElementCount(_gMesh, 2, elementCount, elementCount, elementCount);
 		Validate.AllElementsAndRelations(_gMesh);
 	}
 }

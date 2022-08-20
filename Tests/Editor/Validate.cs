@@ -208,4 +208,12 @@ public static class Validate
 		bmesh.AddFace(0, 1, 2);
 		bmesh.DebugLogAllElements();
 	}
+
+	public static void MeshElementCount(GMesh mesh, int faceCount, int loopCount, int edgeCount, int vertexCount)
+	{
+		Assert.AreEqual(faceCount, mesh.FaceCount, "FaceCount");
+		Assert.AreEqual(loopCount, mesh.LoopCount, "LoopCount");
+		Assert.AreEqual(edgeCount, mesh.EdgeCount, "EdgeCount");
+		Assert.AreEqual(vertexCount, mesh.VertexCount, "VertexCount");
+	}
 }
