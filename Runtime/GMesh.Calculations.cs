@@ -45,7 +45,7 @@ namespace CodeSmile.GMesh
 			ForEachLoop(face, loop =>
 			{
 				loopCount++;
-				sumOfVertexPositions += GetVertex(loop.VertexIndex).Position;
+				sumOfVertexPositions += GetVertex(loop.StartVertexIndex).Position;
 			});
 
 			return sumOfVertexPositions / loopCount;
@@ -60,7 +60,7 @@ namespace CodeSmile.GMesh
 			if (edge.IsValid == false)
 				throw new ArgumentException("edge has been invalidated");
 				
-			return CalculateCenter(edge.Vertex0Index, edge.Vertex1Index);
+			return CalculateCenter(edge.AVertexIndex, edge.OVertexIndex);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

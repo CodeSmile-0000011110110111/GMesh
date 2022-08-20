@@ -15,7 +15,7 @@ namespace CodeSmile.GMesh
 		/// <param name="faceIndex"></param>
 		public void DeleteFace(int faceIndex)
 		{
-			ForEachLoop(faceIndex, (loop) =>
+			ForEachLoop(faceIndex, loop =>
 			{
 				// detach loop from face, thus DeleteLoopFromFace knows it's okay to delete the loop
 				loop.FaceIndex = UnsetIndex;
@@ -27,24 +27,6 @@ namespace CodeSmile.GMesh
 		}
 
 		/// <summary>
-		/// Deletes a loop. Checks if the loop has a face associated with it, if so, it will also delete the face
-		/// and any other loop associated with that face.
-		/// </summary>
-		/// <param name="loopIndex"></param>
-		private void DeleteLoop(int loopIndex)
-		{
-			var loop = GetLoop(loopIndex);
-			
-			// if loop is associated with a face, delete the face which will call DeleteLoopFromFace
-			if (loop.IsValid && loop.FaceIndex != UnsetIndex)
-			{
-				DeleteFace(loop.FaceIndex);
-				return;
-			}
-
-			DeleteLoopInternal_DeleteDetachedLoop(loop);
-		}
-		/// <summary>
 		/// Deletes an edge, as well as its loops and thus all the faces connecting to it.
 		/// </summary>
 		/// <param name="edgeIndex"></param>
@@ -53,7 +35,7 @@ namespace CodeSmile.GMesh
 			var edge = GetEdge(edgeIndex);
 			if (edge.IsValid)
 				DeleteEdgeInternal_DeleteEdgeLoopsAndFaces(ref edge);
-			
+
 			// edge may have been deleted above
 			if (edge.IsValid)
 			{
@@ -84,6 +66,25 @@ namespace CodeSmile.GMesh
 		}
 
 		/// <summary>
+		/// Deletes a loop. Checks if the loop has a face associated with it, if so, it will also delete the face
+		/// and any other loop associated with that face.
+		/// </summary>
+		/// <param name="loopIndex"></param>
+		private void DeleteLoop(int loopIndex)
+		{
+			var loop = GetLoop(loopIndex);
+
+			// if loop is associated with a face, delete the face which will call DeleteLoopFromFace
+			if (loop.IsValid && loop.FaceIndex != UnsetIndex)
+			{
+				DeleteFace(loop.FaceIndex);
+				return;
+			}
+
+			DeleteLoopInternal_DeleteDetachedLoop(loop);
+		}
+
+		/// <summary>
 		/// When deleting a loop this updates the edge's references to that loop.
 		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
 		/// </summary>
@@ -94,9 +95,9 @@ namespace CodeSmile.GMesh
 			if (loop.NextRadialLoopIndex == loop.Index)
 			{
 				// It's the last loop for this edge thus clear edge's loop index:
-				loopEdge.LoopIndex = UnsetIndex;
+				loopEdge.BaseLoopIndex = UnsetIndex;
 				SetEdge(loopEdge);
-				
+
 				// this edge is no longer needed
 				DeleteEdge(loopEdge.Index);
 			}
@@ -105,9 +106,9 @@ namespace CodeSmile.GMesh
 				DeleteLoopInternal_DetachFromRadialLoopCycle(loop);
 
 				// if edge refers to this loop, make it point to the next radial loop
-				if (loopEdge.LoopIndex == loop.Index)
+				if (loopEdge.BaseLoopIndex == loop.Index)
 				{
-					loopEdge.LoopIndex = loop.NextRadialLoopIndex;
+					loopEdge.BaseLoopIndex = loop.NextRadialLoopIndex;
 					SetEdge(loopEdge);
 				}
 			}
@@ -143,7 +144,6 @@ namespace CodeSmile.GMesh
 				InvalidateLoop(loop.Index);
 			}
 		}
-		
 
 		/// <summary>
 		/// Deletes all the loops of an edge. This can cause faces to be deleted as well.
@@ -153,9 +153,9 @@ namespace CodeSmile.GMesh
 		private void DeleteEdgeInternal_DeleteEdgeLoopsAndFaces(ref Edge edge)
 		{
 			// delete all the loops
-			while (edge.LoopIndex != UnsetIndex)
+			while (edge.BaseLoopIndex != UnsetIndex)
 			{
-				DeleteLoop(edge.LoopIndex);
+				DeleteLoop(edge.BaseLoopIndex);
 
 				// get again => edge is modified by DeleteLoop
 				edge = GetEdge(edge.Index);
@@ -171,12 +171,12 @@ namespace CodeSmile.GMesh
 		{
 			var edgeIndex = edge.Index;
 
-			var v0 = GetVertex(edge.Vertex0Index);
+			var v0 = GetVertex(edge.AVertexIndex);
 			if (edgeIndex == v0.BaseEdgeIndex)
 			{
-				if (edgeIndex != edge.V0NextEdgeIndex)
+				if (edgeIndex != edge.ANextEdgeIndex)
 				{
-					v0.BaseEdgeIndex = edge.V0NextEdgeIndex;
+					v0.BaseEdgeIndex = edge.ANextEdgeIndex;
 					SetVertex(v0);
 				}
 				else
@@ -186,12 +186,12 @@ namespace CodeSmile.GMesh
 				}
 			}
 
-			var v1 = GetVertex(edge.Vertex1Index);
+			var v1 = GetVertex(edge.OVertexIndex);
 			if (edgeIndex == v1.BaseEdgeIndex)
 			{
-				if (edgeIndex != edge.V1NextEdgeIndex)
+				if (edgeIndex != edge.ONextEdgeIndex)
 				{
-					v1.BaseEdgeIndex = edge.V1NextEdgeIndex;
+					v1.BaseEdgeIndex = edge.ONextEdgeIndex;
 					SetVertex(v1);
 				}
 				else
@@ -209,33 +209,79 @@ namespace CodeSmile.GMesh
 		/// <param name="edge"></param>
 		private void DeleteEdgeInternal_UpdateEdgeCycle(in Edge edge)
 		{
-			var prev0Edge = GetEdge(edge.V0PrevEdgeIndex);
+			var prev0Edge = GetEdge(edge.APrevEdgeIndex);
 			if (prev0Edge.IsValid)
 			{
-				prev0Edge.SetNextEdgeIndex(edge.Vertex0Index, edge.V0NextEdgeIndex);
+				prev0Edge.SetNextEdgeIndex(edge.AVertexIndex, edge.ANextEdgeIndex);
 				SetEdge(prev0Edge);
 			}
 
-			var next0Edge = GetEdge(edge.V0NextEdgeIndex);
+			var next0Edge = GetEdge(edge.ANextEdgeIndex);
 			if (next0Edge.IsValid)
 			{
-				next0Edge.SetPrevEdgeIndex(edge.Vertex0Index, edge.V0PrevEdgeIndex);
+				next0Edge.SetPrevEdgeIndex(edge.AVertexIndex, edge.APrevEdgeIndex);
 				SetEdge(next0Edge);
 			}
 
-			var prev1Edge = GetEdge(edge.V1PrevEdgeIndex);
+			var prev1Edge = GetEdge(edge.OPrevEdgeIndex);
 			if (prev1Edge.IsValid)
 			{
-				prev1Edge.SetNextEdgeIndex(edge.Vertex1Index, edge.V1NextEdgeIndex);
+				prev1Edge.SetNextEdgeIndex(edge.OVertexIndex, edge.ONextEdgeIndex);
 				SetEdge(prev1Edge);
 			}
 
-			var next1Edge = GetEdge(edge.V1NextEdgeIndex);
+			var next1Edge = GetEdge(edge.ONextEdgeIndex);
 			if (next1Edge.IsValid)
 			{
-				next1Edge.SetPrevEdgeIndex(edge.Vertex1Index, edge.V1PrevEdgeIndex);
+				next1Edge.SetPrevEdgeIndex(edge.OVertexIndex, edge.OPrevEdgeIndex);
 				SetEdge(next1Edge);
 			}
+		}
+
+		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);
+		//private void RemoveEdge(int index) => _edges.RemoveAt(index);
+		//private void RemoveLoop(int index) => _loops.RemoveAt(index);
+		//private void RemoveFace(int index) => _faces.RemoveAt(index);
+
+		private void InvalidateVertex(int index)
+		{
+			var vertex = GetVertex(index);
+			Debug.Assert(vertex.Index > UnsetIndex, $"already invalidated {index}: {vertex}");
+			Debug.Assert(_vertexCount > 0);
+			vertex.Invalidate();
+			_vertices[index] = vertex;
+			_vertexCount--;
+		}
+
+		private void InvalidateEdge(int index)
+		{
+			var edge = GetEdge(index);
+			Debug.Assert(edge.Index > UnsetIndex, $"already invalidated {index}: {edge}");
+			Debug.Assert(_edgeCount > 0);
+			edge.Invalidate();
+			_edges[index] = edge;
+			_edgeCount--;
+		}
+
+		private void InvalidateLoop(int index)
+		{
+			var loop = GetLoop(index);
+			Debug.Assert(loop.Index > UnsetIndex, $"already invalidated {index}: {loop}");
+			Debug.Assert(_loopCount > 0);
+			loop.Invalidate();
+			_loops[index] = loop;
+			_loopCount--;
+			Debug.Assert(_loopCount >= 0);
+		}
+
+		private void InvalidateFace(int index)
+		{
+			var face = GetFace(index);
+			Debug.Assert(face.Index > UnsetIndex, $"already invalidated {index}: {face}");
+			Debug.Assert(_faceCount > 0);
+			face.Invalidate();
+			_faces[index] = face;
+			_faceCount--;
 		}
 	}
 }

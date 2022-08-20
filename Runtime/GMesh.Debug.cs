@@ -133,8 +133,8 @@ namespace CodeSmile.GMesh
 				if (e.IsValid == false)
 					continue;
 
-				var v0 = math.transform(t, GetVertex(e.Vertex0Index).Position * scale);
-				var v1 = math.transform(t, GetVertex(e.Vertex1Index).Position * scale);
+				var v0 = math.transform(t, GetVertex(e.AVertexIndex).Position * scale);
+				var v1 = math.transform(t, GetVertex(e.OVertexIndex).Position * scale);
 				Handles.DrawBezier(v0, v1, v0, v1, lineColor, null, lineThickness);
 
 				var edgeCenter = CalculateCenter(v0, v1);
@@ -163,13 +163,13 @@ namespace CodeSmile.GMesh
 				if (e.IsValid == false)
 					continue;
 
-				var v0PrevEdge = GetEdge(e.V0PrevEdgeIndex);
-				var v0NextEdge = GetEdge(e.V0NextEdgeIndex);
-				var v1NextEdge = GetEdge(e.V1NextEdgeIndex);
-				var v1PrevEdge = GetEdge(e.V1PrevEdgeIndex);
+				var v0PrevEdge = GetEdge(e.APrevEdgeIndex);
+				var v0NextEdge = GetEdge(e.ANextEdgeIndex);
+				var v1NextEdge = GetEdge(e.ONextEdgeIndex);
+				var v1PrevEdge = GetEdge(e.OPrevEdgeIndex);
 
-				var v0Pos = math.transform(t, GetVertex(e.Vertex0Index).Position * scale);
-				var v1Pos = math.transform(t, GetVertex(e.Vertex1Index).Position * scale);
+				var v0Pos = math.transform(t, GetVertex(e.AVertexIndex).Position * scale);
+				var v1Pos = math.transform(t, GetVertex(e.OVertexIndex).Position * scale);
 
 				var edgeCutOff = 0.22f;
 				var edgeDir = (v1Pos - v0Pos) * edgeCutOff;
@@ -194,10 +194,10 @@ namespace CodeSmile.GMesh
 				var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 3f;
 				Handles.Label(textEdgeV0, "V0", style);
 				Handles.Label(textEdgeV1, "V1", style);
-				Handles.Label(toV0Prev, $"<{e.V0PrevEdgeIndex}", style);
-				Handles.Label(toV0Next, $"{e.V0NextEdgeIndex}>", style);
-				Handles.Label(toV1Prev, $"<{e.V1PrevEdgeIndex}", style);
-				Handles.Label(toV1Next, $"{e.V1NextEdgeIndex}>", style);
+				Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}", style);
+				Handles.Label(toV0Next, $"{e.ANextEdgeIndex}>", style);
+				Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}", style);
+				Handles.Label(toV1Next, $"{e.ONextEdgeIndex}>", style);
 				style.fontSize += prevNextFontSizeOffset;
 			}
 		}
@@ -228,8 +228,8 @@ namespace CodeSmile.GMesh
 				ForEachLoop(f, l =>
 				{
 					var e = GetEdge(l.EdgeIndex);
-					var vStartIndex = l.VertexIndex;
-					var vEndIndex = e.GetOtherVertexIndex(l.VertexIndex);
+					var vStartIndex = l.StartVertexIndex;
+					var vEndIndex = e.GetOppositeVertexIndex(l.StartVertexIndex);
 					var vStart = math.transform(t, GetVertex(vStartIndex).Position * scale);
 					var vEnd = math.transform(t, GetVertex(vEndIndex).Position * scale);
 
@@ -291,8 +291,8 @@ namespace CodeSmile.GMesh
 				ForEachLoop(f, l =>
 				{
 					var e = GetEdge(l.EdgeIndex);
-					var vStartIndex = l.VertexIndex;
-					var vEndIndex = e.GetOtherVertexIndex(l.VertexIndex);
+					var vStartIndex = l.StartVertexIndex;
+					var vEndIndex = e.GetOppositeVertexIndex(l.StartVertexIndex);
 					var vStart = GetVertex(vStartIndex).Position;
 					var vEnd = GetVertex(vEndIndex).Position;
 
@@ -346,7 +346,7 @@ namespace CodeSmile.GMesh
 
 				var centroid = math.transform(t, CalculateFaceCentroid(f) * scale);
 				var firstLoop = GetLoop(f.FirstLoopIndex);
-				var vertex = math.transform(t, GetVertex(firstLoop.VertexIndex).Position * scale);
+				var vertex = math.transform(t, GetVertex(firstLoop.StartVertexIndex).Position * scale);
 
 				Handles.DrawBezier(centroid, vertex, centroid, vertex, lineColor, null, lineThickness);
 				Handles.Label(centroid, $"{f.Index}", style);

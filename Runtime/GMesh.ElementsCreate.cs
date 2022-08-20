@@ -4,7 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace CodeSmile.GMesh
 {
@@ -110,72 +112,6 @@ namespace CodeSmile.GMesh
 			return edgeIndex;
 		}
 
-		private void CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
-		{
-			var edgeIndex = edge.Index;
-
-			// Vertex 0
-			{
-				var v0 = GetVertex(v0Index);
-				if (v0.BaseEdgeIndex == UnsetIndex)
-				{
-					v0.BaseEdgeIndex = edge.V0PrevEdgeIndex = edge.V0NextEdgeIndex = edgeIndex;
-					SetVertex(v0);
-				}
-				else
-				{
-					var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
-					edge.V0PrevEdgeIndex = v0.BaseEdgeIndex;
-					edge.V0NextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
-
-					var v0PrevEdge = GetEdge(edge.V0PrevEdgeIndex);
-					v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
-					SetEdge(v0PrevEdge);
-
-					var v0NextEdge = GetEdge(edge.V0NextEdgeIndex);
-					v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
-					SetEdge(v0NextEdge);
-
-					// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
-					// This occurs when v0 and v1 were the first vertices to be connected with an edge.
-					var prevEdgeVertex0 = GetVertex(v0BaseEdge.Vertex0Index);
-					if (prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex)
-					{
-						v0.BaseEdgeIndex = edgeIndex;
-						SetVertex(v0);
-					}
-				}
-			}
-
-			// Vertex 1
-			{
-				var v1 = GetVertex(v1Index);
-				if (v1.BaseEdgeIndex == UnsetIndex)
-				{
-					// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
-					// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
-					v1.BaseEdgeIndex = edge.V1PrevEdgeIndex = edge.V1NextEdgeIndex = edgeIndex;
-					SetVertex(v1);
-				}
-				else
-				{
-					var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
-					edge.V1PrevEdgeIndex = v1.BaseEdgeIndex;
-					edge.V1NextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
-
-					var v1PrevEdge = GetEdge(edge.V1PrevEdgeIndex);
-					v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
-					SetEdge(v1PrevEdge);
-
-					var v1NextEdge = GetEdge(edge.V1NextEdgeIndex);
-					v1NextEdge.SetPrevEdgeIndex(v1Index, edgeIndex);
-					SetEdge(v1NextEdge);
-				}
-			}
-
-			SetEdge(edge);
-		}
-
 		/// <summary>
 		/// Creates multiple new edges at once forming a closed loop (ie 0=>1, 1=>2, 2=>0). Vertices must already exist.
 		/// 
@@ -245,6 +181,72 @@ namespace CodeSmile.GMesh
 			return vertIndices;
 		}
 
+		private void CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
+		{
+			var edgeIndex = edge.Index;
+
+			// Vertex 0
+			{
+				var v0 = GetVertex(v0Index);
+				if (v0.BaseEdgeIndex == UnsetIndex)
+				{
+					v0.BaseEdgeIndex = edge.APrevEdgeIndex = edge.ANextEdgeIndex = edgeIndex;
+					SetVertex(v0);
+				}
+				else
+				{
+					var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
+					edge.APrevEdgeIndex = v0.BaseEdgeIndex;
+					edge.ANextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
+
+					var v0PrevEdge = GetEdge(edge.APrevEdgeIndex);
+					v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
+					SetEdge(v0PrevEdge);
+
+					var v0NextEdge = GetEdge(edge.ANextEdgeIndex);
+					v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
+					SetEdge(v0NextEdge);
+
+					// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
+					// This occurs when v0 and v1 were the first vertices to be connected with an edge.
+					var prevEdgeVertex0 = GetVertex(v0BaseEdge.AVertexIndex);
+					if (prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex)
+					{
+						v0.BaseEdgeIndex = edgeIndex;
+						SetVertex(v0);
+					}
+				}
+			}
+
+			// Vertex 1
+			{
+				var v1 = GetVertex(v1Index);
+				if (v1.BaseEdgeIndex == UnsetIndex)
+				{
+					// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
+					// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
+					v1.BaseEdgeIndex = edge.OPrevEdgeIndex = edge.ONextEdgeIndex = edgeIndex;
+					SetVertex(v1);
+				}
+				else
+				{
+					var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
+					edge.OPrevEdgeIndex = v1.BaseEdgeIndex;
+					edge.ONextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
+
+					var v1PrevEdge = GetEdge(edge.OPrevEdgeIndex);
+					v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
+					SetEdge(v1PrevEdge);
+
+					var v1NextEdge = GetEdge(edge.ONextEdgeIndex);
+					v1NextEdge.SetPrevEdgeIndex(v1Index, edgeIndex);
+					SetEdge(v1NextEdge);
+				}
+			}
+
+			SetEdge(edge);
+		}
+
 		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
 		{
 			var newLoopIndex = LoopCount;
@@ -271,11 +273,11 @@ namespace CodeSmile.GMesh
 			var nextRadialLoopIndex = newLoopIndex;
 
 			var edge = GetEdge(edgeIndex);
-			if (edge.LoopIndex == UnsetIndex)
-				edge.LoopIndex = newLoopIndex;
+			if (edge.BaseLoopIndex == UnsetIndex)
+				edge.BaseLoopIndex = newLoopIndex;
 			else
 			{
-				var edgeLoop = GetLoop(edge.LoopIndex);
+				var edgeLoop = GetLoop(edge.BaseLoopIndex);
 				prevRadialLoopIndex = edgeLoop.Index;
 				nextRadialLoopIndex = edgeLoop.NextRadialLoopIndex;
 
@@ -323,6 +325,46 @@ namespace CodeSmile.GMesh
 			}
 
 			return (prevLoopIndex, nextLoopIndex);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddVertex(ref Vertex vertex)
+		{
+			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
+			vertex.Index = _vertices.Length;
+			_vertices.Add(vertex);
+			_vertexCount++;
+			return vertex.Index;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddEdge(ref Edge edge)
+		{
+			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
+			edge.Index = _edges.Length;
+			_edges.Add(edge);
+			_edgeCount++;
+			return edge.Index;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddLoop(ref Loop loop)
+		{
+			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
+			loop.Index = _loops.Length;
+			_loops.Add(loop);
+			_loopCount++;
+			return loop.Index;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddFace(ref Face face)
+		{
+			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
+			face.Index = _faces.Length;
+			_faces.Add(face);
+			_faceCount++;
+			return face.Index;
 		}
 	}
 }

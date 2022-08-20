@@ -123,7 +123,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!43 &125578958
+--- !u!43 &347368321
 Mesh:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -501,7 +501,7 @@ GameObject:
   - component: {fileID: 1979789083}
   - component: {fileID: 1979789082}
   m_Layer: 0
-  m_Name: GMesh Primitive Plane
+  m_Name: GMesh Primitives
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -612,4 +612,4 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1979789079}
-  m_Mesh: {fileID: 125578958}
+  m_Mesh: {fileID: 347368321}

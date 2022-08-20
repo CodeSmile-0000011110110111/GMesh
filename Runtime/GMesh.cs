@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace CodeSmile.GMesh
 {
@@ -52,71 +53,109 @@ namespace CodeSmile.GMesh
 		public const float GridSize = 0.001f; // round all positions to 1mm grid
 
 		/// <summary>
-		/// The inverse of the grid, ie upscale factor before rounding. See GridSize.
+		/// The inverse of the grid, ie upscale factor. See GridSize.
 		/// </summary>
-		public const float InvGridSize = 1f / GridSize; // inverse of grid size (eg 0.001 => 1000)
+		private static readonly double GridUpscale = 1.0 / GridSize; // inverse of grid size (eg 0.001 => 1000)
 
 		/// <summary>
-		/// Creates a new GMesh instance with the contents of the input meshes.
-		/// Note: does not prevent creating duplicate faces.
-		/// </summary>
-		/// <param name="gMeshes">one or more GMesh instances to combine</param>
-		/// <param name="disposeInputMeshes">If true, Dispose() is called on each input mesh before returning to caller.</param>
-		public static GMesh Combine(IEnumerable<GMesh> gMeshes, bool disposeInputMeshes = false)
-		{
-			var newMesh = new GMesh();
-
-			var totalFaceCount = 0;
-			foreach (var mesh in gMeshes)
-				totalFaceCount += mesh.FaceCount;
-
-			var allFaceVertices = new GridVertex[totalFaceCount][];
-			var allFaceVertIndex = 0;
-
-			// get all vertices from all faces, use vertex GridPosition
-			foreach (var mesh in gMeshes)
-			{
-				foreach (var face in mesh.Faces)
-				{
-					if (face.IsValid == false)
-						continue;
-
-					var faceIndex = face.Index;
-					var i = 0;
-					var faceVertices = new GridVertex[face.ElementCount];
-					mesh.ForEachLoop(face, loop =>
-					{
-						// loop vertex is already in the correct winding order, regardless of edge orientation
-						faceVertices[i++] = new GridVertex(mesh.GetVertex(loop.VertexIndex), faceIndex);
-					});
-
-					allFaceVertices[allFaceVertIndex++] = faceVertices;
-				}
-			}
-
-			// TODO ...
-			throw new NotImplementedException("wip");
-			// remove vertex duplicates and patch new indices to face vert indices
-			var gridVertices = new NativeParallelHashMap<float3, GridVertex>(0, Allocator.Persistent);
-
-			// create all vertices with "no duplicates"
-			// create faces using updated vertex indices
-
-			if (disposeInputMeshes)
-			{
-				foreach (var mesh in gMeshes)
-				{
-					if (mesh != null && mesh.IsDisposed == false)
-						mesh.Dispose();
-				}
-			}
-
-			return newMesh;
-		}
-
-		/// <summary>
-		/// Create an empty GMesh.
+		/// Creates an empty GMesh.
 		/// </summary>
 		public GMesh() {}
+
+		/// <summary>
+		/// Moves (snaps) all vertex positions to an imaginary grid given by gridSize.
+		/// For example, if gridSize is 0.01f all vertices are snapped to the nearest 1cm coordinate.
+		/// </summary>
+		/// <param name="gridSize"></param>
+		public void SnapVerticesToGrid(float gridSize)
+		{
+			for (int i = 0; i < VertexCount; i++)
+			{
+				var vertex = GetVertex(i);
+				if (vertex.IsValid)
+				{
+					vertex.SnapPosition(gridSize);
+					SetVertex(vertex);
+				}
+			}
+		}
+		
+		/// <summary>
+		/// Creates a new GMesh instance with the contents of the input meshes.
+		/// Vertices that are close-by (default: 1mm) will be merged. 
+		/// </summary>
+		/// <param name="inputMeshes">one or more GMesh instances to combine</param>
+		/// <param name="disposeInputMeshes">If true, Dispose() is called on each input mesh before returning to caller.</param>
+		public static GMesh Combine(IEnumerable<GMesh> inputMeshes, bool disposeInputMeshes = false)
+		{
+			var totalFaceCount = 0;
+			foreach (var mesh in inputMeshes)
+				totalFaceCount += mesh.FaceCount;
+
+			var allFaceGridPositions = new int3[totalFaceCount][];
+			var allFaceGridPosIndex = 0;
+
+			// for the duration of the combine operation, all vertices are assumed to be on "grid" positions
+			// initial capacity is a "best guess" of the minimum (ie in a triangle strip each face would add just 1 vertex)
+			var knownGridPositions = new NativeParallelHashMap<int3, int>(totalFaceCount, Allocator.Temp);
+			var combinedMesh = new GMesh();
+
+			// get all vertices from all faces, use vertex GridPosition to merge close ones
+			foreach (var inputMesh in inputMeshes)
+			{
+				foreach (var inputFace in inputMesh.Faces)
+				{
+					if (inputFace.IsValid == false)
+						continue;
+
+					var faceGridPos = new int3[inputFace.ElementCount];
+					var faceGridPosIndex = 0;
+
+					inputMesh.ForEachLoop(inputFace, loop =>
+					{
+						// loop vertex is guaranteed to be the origin vertex for this loop
+						var v = inputMesh.GetVertex(loop.StartVertexIndex);
+						// turn it into a "grid" position => close-by (ie rounding error) vertex positions are considered identical
+						var gridPos = v.GridPosition();
+						// check if that grid position already has a vertex
+						if (knownGridPositions.ContainsKey(gridPos) == false)
+						{
+							// add the gridPos with its new index in the combined GMesh
+							var index = combinedMesh.CreateVertex(v.Position);
+							knownGridPositions.Add(gridPos, index);
+						}
+
+						faceGridPos[faceGridPosIndex++] = gridPos;
+					});
+
+					allFaceGridPositions[allFaceGridPosIndex++] = faceGridPos;
+				}
+			}
+
+			/*
+			Debug.Log("known pos: " + knownGridPositions.Count());
+			foreach (var gridPos in knownGridPositions)
+				Debug.Log($"[{gridPos.Value}] = {gridPos.Key} => Vertex: {combinedMesh.GetVertex(gridPos.Value)}");
+			*/
+
+			foreach (var faceVertices in allFaceGridPositions)
+			{
+				// get the face's vertex indices based on their grid positions
+				var vertexIndices = new int[faceVertices.Length];
+				for (var i = 0; i < faceVertices.Length; i++)
+					vertexIndices[i] = knownGridPositions[faceVertices[i]];
+
+				// now we can create the new face
+				combinedMesh.CreateFace(vertexIndices);
+			}
+
+			knownGridPositions.Dispose();
+
+			// dispose, if requested
+			if (disposeInputMeshes)
+				DisposeAll(inputMeshes);
+
+			return combinedMesh;
+		}
 	}
 }

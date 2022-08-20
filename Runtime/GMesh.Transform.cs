@@ -15,6 +15,10 @@ namespace CodeSmile.GMesh
 
 		public float3 Pivot { get => _pivot; set => _pivot = value; }
 
+		/// <summary>
+		/// Applies the transformation to all vertices with the Pivot as the center.
+		/// </summary>
+		/// <param name="transform"></param>
 		public void ApplyTransform(in Transform transform)
 		{
 			// FIXME: implement using Jobs since this is very Burst-friendly
@@ -29,6 +33,9 @@ namespace CodeSmile.GMesh
 			}
 		}
 
+		/// <summary>
+		/// GMesh transform representation.
+		/// </summary>
 		[Serializable]
 		public struct Transform
 		{

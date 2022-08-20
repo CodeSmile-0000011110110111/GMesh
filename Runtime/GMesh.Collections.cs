@@ -2,9 +2,9 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace CodeSmile.GMesh
@@ -66,6 +66,22 @@ namespace CodeSmile.GMesh
 		public bool IsDisposed => !(_vertices.IsCreated && _edges.IsCreated && _loops.IsCreated && _faces.IsCreated);
 
 		/// <summary>
+		/// Calls Dispose() on all non-null meshes in the collection that have not been disposed yet.
+		/// </summary>
+		/// <param name="meshes"></param>
+		public static void DisposeAll(IEnumerable<GMesh> meshes)
+		{
+			if (meshes != null)
+			{
+				foreach (var mesh in meshes)
+				{
+					if (mesh != null && mesh.IsDisposed == false)
+						mesh.Dispose();
+				}
+			}
+		}
+
+		/// <summary>
 		/// Dispose of internal native collections.
 		/// Failure to call Dispose() in time will result in a big fat ugly Console error message.
 		/// Calling Dispose() more than once will throw an InvalidOperationException.
@@ -84,132 +100,57 @@ namespace CodeSmile.GMesh
 			_faces.Dispose();
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddVertex(ref Vertex vertex)
-		{
-			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
-			vertex.Index = _vertices.Length;
-			_vertices.Add(vertex);
-			_vertexCount++;
-			return vertex.Index;
-		}
+		/// <summary>
+		/// Gets a vertex by its index.
+		/// </summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Vertex GetVertex(int index) => _vertices[index];
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddEdge(ref Edge edge)
-		{
-			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
-			edge.Index = _edges.Length;
-			_edges.Add(edge);
-			_edgeCount++;
-			return edge.Index;
-		}
+		/// <summary>
+		/// Gets an edge by its index.
+		/// </summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Edge GetEdge(int index) => _edges[index];
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddLoop(ref Loop loop)
-		{
-			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
-			loop.Index = _loops.Length;
-			_loops.Add(loop);
-			_loopCount++;
-			return loop.Index;
-		}
+		/// <summary>
+		/// Gets a loop by its index.
+		/// </summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Loop GetLoop(int index) => _loops[index];
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddFace(ref Face face)
-		{
-			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
-			face.Index = _faces.Length;
-			_faces.Add(face);
-			_faceCount++;
-			return face.Index;
-		}
+		/// <summary>
+		/// Gets a face by its index.
+		/// </summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Face GetFace(int index) => _faces[index];
 
-		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);
-		//private void RemoveEdge(int index) => _edges.RemoveAt(index);
-		//private void RemoveLoop(int index) => _loops.RemoveAt(index);
-		//private void RemoveFace(int index) => _faces.RemoveAt(index);
+		/// <summary>
+		/// Sets (updates) a vertex in the list using its index.
+		/// </summary>
+		/// <param name="v"></param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetVertex(in Vertex v) => _vertices[v.Index] = v;
 
-		private void InvalidateVertex(int index)
-		{
-			var vertex = GetVertex(index);
-			Debug.Assert(vertex.Index > UnsetIndex, $"already invalidated {index}: {vertex}");
-			Debug.Assert(_vertexCount > 0);
-			vertex.Invalidate();
-			_vertices[index] = vertex;
-			_vertexCount--;
-		}
+		/// <summary>
+		/// Sets (updates) an edge in the list using its index.
+		/// </summary>
+		/// <param name="e"></param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetEdge(in Edge e) => _edges[e.Index] = e;
 
-		private void InvalidateEdge(int index)
-		{
-			var edge = GetEdge(index);
-			Debug.Assert(edge.Index > UnsetIndex, $"already invalidated {index}: {edge}");
-			Debug.Assert(_edgeCount > 0);
-			edge.Invalidate();
-			_edges[index] = edge;
-			_edgeCount--;
-		}
+		/// <summary>
+		/// Sets (updates) a loop in the list using its index.
+		/// </summary>
+		/// <param name="l"></param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetLoop(in Loop l) => _loops[l.Index] = l;
 
-		private void InvalidateLoop(int index)
-		{
-			var loop = GetLoop(index);
-			Debug.Assert(loop.Index > UnsetIndex, $"already invalidated {index}: {loop}");
-			Debug.Assert(_loopCount > 0);
-			loop.Invalidate();
-			_loops[index] = loop;
-			_loopCount--;
-			Debug.Assert(_loopCount >= 0);
-		}
-
-		private void InvalidateFace(int index)
-		{
-			var face = GetFace(index);
-			Debug.Assert(face.Index > UnsetIndex, $"already invalidated {index}: {face}");
-			Debug.Assert(_faceCount > 0);
-			face.Invalidate();
-			_faces[index] = face;
-			_faceCount--;
-		}
-
-		/*
-		private void RemoveInvalidatedVertices()
-		{
-			// Vertex:
-			// referencing edge
-			// referenced by edge, loop
-		}
-		private void RemoveInvalidatedEdges()
-		{
-			// Edge:
-			// referencing vertex, edge, loop
-			// referenced by vertex, edge, loop
-		}
-		private void RemoveInvalidatedLoops()
-		{
-			// Loop:
-			// referencing face, edge, loop, vertex
-			// referenced by face, edge, loop
-			
-		}
-		private void RemoveInvalidatedFaces()
-		{
-			// Faces:
-			// referencing loops
-			// referenced by loops
-			
-			var removeCount = 0;
-			var faceCount = _faces.Length;
-			for (int i = 0; i < (faceCount - removeCount); i++)
-			{
-				var face = _faces[i];
-				if (face.Index == UnsetIndex)
-				{
-					removeCount++;
-					_faces.RemoveAt(i);
-					// no further updates, assuming the face has deleted its loops
-				}
-			}
-		}
-		*/
+		/// <summary>
+		/// Sets (updates) a face in the list using its index.
+		/// </summary>
+		/// <param name="f"></param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _faces[f.Index] = f;
 
 		private void RemoveInvalidatedElements()
 		{

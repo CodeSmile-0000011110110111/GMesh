@@ -75,11 +75,11 @@ public static class Validate
 			GMesh.Edge edge = default;
 			Assert.IsTrue(loop.EdgeIndex >= 0 && loop.EdgeIndex < gMesh.EdgeCount);
 			Assert.DoesNotThrow(() => { edge = gMesh.GetEdge(loop.EdgeIndex); });
-			Assert.AreEqual(loop.Index, edge.LoopIndex);
+			Assert.AreEqual(loop.Index, edge.BaseLoopIndex);
 
 			GMesh.Vertex vertex = default;
-			Assert.IsTrue(loop.VertexIndex >= 0 && loop.VertexIndex < gMesh.VertexCount);
-			Assert.DoesNotThrow(() => { vertex = gMesh.GetVertex(loop.VertexIndex); });
+			Assert.IsTrue(loop.StartVertexIndex >= 0 && loop.StartVertexIndex < gMesh.VertexCount);
+			Assert.DoesNotThrow(() => { vertex = gMesh.GetVertex(loop.StartVertexIndex); });
 
 			// prev/next loops
 			{
@@ -121,39 +121,39 @@ public static class Validate
 			if (edge.IsValid == false)
 				continue;
 			
-			Assert.IsTrue(edge.Vertex0Index >= 0 && edge.Vertex0Index < vertexCount);
-			Assert.IsTrue(edge.LoopIndex >= 0 && edge.LoopIndex < gMesh.LoopCount);
+			Assert.IsTrue(edge.AVertexIndex >= 0 && edge.AVertexIndex < vertexCount);
+			Assert.IsTrue(edge.BaseLoopIndex >= 0 && edge.BaseLoopIndex < gMesh.LoopCount);
 
 			GMesh.Vertex v0 = default, v1 = default;
-			Assert.DoesNotThrow(() => { v0 = gMesh.GetVertex(edge.Vertex0Index); });
-			Assert.DoesNotThrow(() => { v1 = gMesh.GetVertex(edge.Vertex1Index); });
+			Assert.DoesNotThrow(() => { v0 = gMesh.GetVertex(edge.AVertexIndex); });
+			Assert.DoesNotThrow(() => { v1 = gMesh.GetVertex(edge.OVertexIndex); });
 			//Assert.IsTrue(edge.Index == v0.BaseEdgeIndex || edge.Index == v1.BaseEdgeIndex); // not always true
 			Assert.IsTrue(v0.BaseEdgeIndex >= 0 && v0.BaseEdgeIndex < edgeCount);
 			Assert.IsTrue(v1.BaseEdgeIndex >= 0 && v1.BaseEdgeIndex < edgeCount);
 
 			if (assertVertexEdges)
 			{
-				Assert.IsTrue(edge.V0PrevEdgeIndex >= 0 && edge.V0PrevEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.V0NextEdgeIndex >= 0 && edge.V0NextEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.V1PrevEdgeIndex >= 0 && edge.V1PrevEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.V1NextEdgeIndex >= 0 && edge.V1NextEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.APrevEdgeIndex >= 0 && edge.APrevEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.ANextEdgeIndex >= 0 && edge.ANextEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.OPrevEdgeIndex >= 0 && edge.OPrevEdgeIndex < edgeCount);
+				Assert.IsTrue(edge.ONextEdgeIndex >= 0 && edge.ONextEdgeIndex < edgeCount);
 
 				// TODO: verify these assumptions ...
 
 				GMesh.Edge v0PrevEdge = default;
-				Assert.DoesNotThrow(() => { v0PrevEdge = gMesh.GetEdge(edge.V0PrevEdgeIndex); });
+				Assert.DoesNotThrow(() => { v0PrevEdge = gMesh.GetEdge(edge.APrevEdgeIndex); });
 				//Assert.AreEqual(edge.Index, v0PrevEdge.V1NextEdgeIndex);
 
 				GMesh.Edge v0NextEdge = default;
-				Assert.DoesNotThrow(() => { v0NextEdge = gMesh.GetEdge(edge.V0NextEdgeIndex); });
+				Assert.DoesNotThrow(() => { v0NextEdge = gMesh.GetEdge(edge.ANextEdgeIndex); });
 				//Assert.AreEqual(edge.Index, v0NextEdge.V1PrevEdgeIndex);
 
 				GMesh.Edge v1PrevEdge = default;
-				Assert.DoesNotThrow(() => { v1PrevEdge = gMesh.GetEdge(edge.V1PrevEdgeIndex); });
+				Assert.DoesNotThrow(() => { v1PrevEdge = gMesh.GetEdge(edge.OPrevEdgeIndex); });
 				//Assert.AreEqual(edge.Index, v1PrevEdge.V0NextEdgeIndex);
 
 				GMesh.Edge v1NextEdge = default;
-				Assert.DoesNotThrow(() => { v1NextEdge = gMesh.GetEdge(edge.V1NextEdgeIndex); });
+				Assert.DoesNotThrow(() => { v1NextEdge = gMesh.GetEdge(edge.ONextEdgeIndex); });
 				//Assert.AreEqual(edge.Index, v1NextEdge.V0PrevEdgeIndex);
 			}
 		}

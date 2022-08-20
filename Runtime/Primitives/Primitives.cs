@@ -76,7 +76,7 @@ namespace CodeSmile.GMesh
 			var r = Plane(new PlaneParameters(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
 			var u = Plane(new PlaneParameters(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
 			var d = Plane(new PlaneParameters(vertexCount.xz, new float3(0f, -0.5f, 0f), new float3(270f, 90f, 90f)));
-			return GMesh.Combine(new[] { b, f, l, r, u, d }, true);
+			return GMesh.Combine(new[] { b, f, l, r, u, d }, disposeInputMeshes: true);
 		}
 	}
 }

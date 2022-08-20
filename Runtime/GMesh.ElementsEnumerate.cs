@@ -35,29 +35,6 @@ namespace CodeSmile.GMesh
 		/// <param name="callback">Action to call for each loop. If you modify loop you need to call SetLoop(loop) to store it!</param>
 		public void ForEachLoop(in Face face, Action<Loop> callback) => ForEachLoopInternal(face, callback, null);
 
-		private void ForEachLoopInternal(in Face face, Action<Loop> callback, Predicate<Loop> predicate)
-		{
-			// assumption: if a face is valid, all its loops are supposed to be valid too! (at least when we start)
-			if (face.IsValid)
-			{
-				var firstLoopIndex = face.FirstLoopIndex;
-				var loop = GetLoop(firstLoopIndex);
-				var usePredicate = predicate != null;
-				do
-				{
-					if (usePredicate)
-					{
-						if (predicate.Invoke(loop))
-							break;
-					}
-					else
-						callback.Invoke(loop);
-
-					loop = GetLoop(loop.NextLoopIndex);
-				} while (loop.IsValid && loop.Index != firstLoopIndex);
-			}
-		}
-
 		/// <summary>
 		/// Enumerates over all edges of a vertex. Return true from predicate to break out of loop early.
 		/// </summary>
@@ -85,6 +62,29 @@ namespace CodeSmile.GMesh
 		/// <param name="vertex">the vertex whose edges are to be enumerated</param>
 		/// <param name="callback">Action to call for each edge. If you modify edge you need to call SetEdge(edge) to store it!</param>
 		public void ForEachEdge(in Vertex vertex, Action<Edge> callback) => ForEachEdgeInternal(vertex, callback, null);
+
+		private void ForEachLoopInternal(in Face face, Action<Loop> callback, Predicate<Loop> predicate)
+		{
+			// assumption: if a face is valid, all its loops are supposed to be valid too! (at least when we start)
+			if (face.IsValid)
+			{
+				var firstLoopIndex = face.FirstLoopIndex;
+				var loop = GetLoop(firstLoopIndex);
+				var usePredicate = predicate != null;
+				do
+				{
+					if (usePredicate)
+					{
+						if (predicate.Invoke(loop))
+							break;
+					}
+					else
+						callback.Invoke(loop);
+
+					loop = GetLoop(loop.NextLoopIndex);
+				} while (loop.IsValid && loop.Index != firstLoopIndex);
+			}
+		}
 
 		private void ForEachEdgeInternal(in Vertex vertex, Action<Edge> callback, Predicate<Edge> predicate)
 		{

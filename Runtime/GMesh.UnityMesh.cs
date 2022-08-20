@@ -22,20 +22,6 @@ namespace CodeSmile.GMesh
 			return null;
 		}
 
-		public static bool IsClockwise(float3 p1, float3 p2, float3 p3)
-		{
-			var isClockWise = true;
-
-			var determinant = p1.x * p2.y + p3.x * p1.y + p2.x * p3.y -
-			                  p1.x * p3.y - p3.x * p2.y - p2.x * p1.y;
-			var determinant3d = math.determinant(new float3x3(p1, p2, p3));
-
-			if (determinant > 0f)
-				isClockWise = false;
-
-			return isClockWise;
-		}
-
 		public Mesh ToMesh(Mesh mesh = null)
 		{
 			if (mesh == null)
@@ -74,7 +60,7 @@ namespace CodeSmile.GMesh
 						// => only guaranteed to work with convex shapes
 						ForEachLoop(faceIndex, loop =>
 						{
-							var loopVert = GetVertex(loop.VertexIndex);
+							var loopVert = GetVertex(loop.StartVertexIndex);
 							if (currentVertex > 2)
 							{
 								// add extra fan triangles from first vertex to last vertex
@@ -83,7 +69,7 @@ namespace CodeSmile.GMesh
 							}
 
 							meshIndices.Add(firstVertexIndex + currentVertex);
-							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, loopVert.Normal, loop.UV));
+							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero));
 							currentVertex++;
 						});
 						
@@ -279,5 +265,21 @@ namespace CodeSmile.GMesh
 				new() { attribute = VertexAttribute.TexCoord0, format = VertexAttributeFormat.Float32, dimension = 2, stream = 0 },
 			};
 		}
+
+		/*
+		public static bool IsClockwise(float3 p1, float3 p2, float3 p3)
+		{
+			var isClockWise = true;
+
+			var determinant = p1.x * p2.y + p3.x * p1.y + p2.x * p3.y -
+			                  p1.x * p3.y - p3.x * p2.y - p2.x * p1.y;
+			var determinant3d = math.determinant(new float3x3(p1, p2, p3));
+
+			if (determinant > 0f)
+				isClockWise = false;
+
+			return isClockWise;
+		}
+		*/
 	}
 }
