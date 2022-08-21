@@ -9,14 +9,14 @@ using UnityEngine;
 
 public static class Validate
 {
-	public static void AllElementsAndRelations(GMesh gMesh, bool assertVertexEdges = false, bool logElements = false)
+	public static void AllElementsAndRelations(GMesh gMesh, bool logElements = false)
 	{
 		if (logElements)
 			gMesh.DebugLogAllElements();
 
 		AllElementsIndicesInSequentialOrder(gMesh);
 		VertexElementIndices(gMesh);
-		EdgeElementIndices(gMesh,assertVertexEdges);
+		EdgeElementIndices(gMesh);
 		LoopElementIndices(gMesh);
 		FaceElementIndices(gMesh);
 		CanCreateUnityMesh(gMesh);
@@ -37,7 +37,7 @@ public static class Validate
 			var face = gMesh.GetFace(i);
 			if (face.IsValid == false)
 				continue;
-			
+
 			Assert.IsTrue(face.FirstLoopIndex >= 0 && face.FirstLoopIndex < gMesh.LoopCount);
 
 			GMesh.Loop firstLoop = default;
@@ -51,6 +51,7 @@ public static class Validate
 			{
 				loopCount--;
 				loop = gMesh.GetLoop(loop.NextLoopIndex);
+				Assert.AreEqual(loop.Index, gMesh.GetLoop(loop.PrevLoopIndex).NextLoopIndex, $"prev/next broken for {loop}");
 				Assert.AreEqual(face.Index, loop.FaceIndex);
 			}
 
@@ -71,27 +72,43 @@ public static class Validate
 			GMesh.Face face = default;
 			Assert.IsTrue(loop.FaceIndex >= 0 && loop.FaceIndex < gMesh.FaceCount);
 			Assert.DoesNotThrow(() => { face = gMesh.GetFace(loop.FaceIndex); });
+			Assert.IsTrue(face.IsValid);
+
+			// can this loop be found when enumerating face loops?
+			var found = false;
+			gMesh.ForEachLoop(face, l => found = l.Index == loop.Index);
+			Assert.IsTrue(found, $"{loop} not found in loop cycle of {face}");
 
 			GMesh.Edge edge = default;
 			Assert.IsTrue(loop.EdgeIndex >= 0 && loop.EdgeIndex < gMesh.EdgeCount);
 			Assert.DoesNotThrow(() => { edge = gMesh.GetEdge(loop.EdgeIndex); });
-			Assert.AreEqual(loop.Index, edge.BaseLoopIndex);
+			Assert.IsTrue(edge.IsValid);
+
+			// can this edge be found when enumerating radial loop cycle?
+			found = false;
+			gMesh.ForEachRadialLoop(edge, l => found = l.Index == loop.Index);
+			Assert.IsTrue(found, $"{loop} not found in radial loop cycle of {edge}");
 
 			GMesh.Vertex vertex = default;
 			Assert.IsTrue(loop.StartVertexIndex >= 0 && loop.StartVertexIndex < gMesh.VertexCount);
 			Assert.DoesNotThrow(() => { vertex = gMesh.GetVertex(loop.StartVertexIndex); });
+			Assert.IsTrue(vertex.IsValid);
 
 			// prev/next loops
 			{
 				Assert.IsTrue(loop.PrevLoopIndex >= 0 && loop.PrevLoopIndex < loopCount);
 				Assert.IsTrue(loop.NextLoopIndex >= 0 && loop.NextLoopIndex < loopCount);
+				Assert.IsTrue(loop.PrevLoopIndex != loop.Index);
+				Assert.IsTrue(loop.NextLoopIndex != loop.Index);
 
 				GMesh.Loop prevLoop = default;
 				Assert.DoesNotThrow(() => { prevLoop = gMesh.GetLoop(loop.PrevLoopIndex); });
+				Assert.IsTrue(prevLoop.IsValid);
 				Assert.AreEqual(loop.Index, prevLoop.NextLoopIndex);
 
 				GMesh.Loop nextLoop = default;
 				Assert.DoesNotThrow(() => { nextLoop = gMesh.GetLoop(loop.NextLoopIndex); });
+				Assert.IsTrue(nextLoop.IsValid);
 				Assert.AreEqual(loop.Index, nextLoop.PrevLoopIndex);
 			}
 
@@ -100,18 +117,31 @@ public static class Validate
 				Assert.IsTrue(loop.PrevRadialLoopIndex >= 0 && loop.PrevRadialLoopIndex < loopCount);
 				Assert.IsTrue(loop.NextRadialLoopIndex >= 0 && loop.NextRadialLoopIndex < loopCount);
 
+				// for the time being the assumption is that radial loops either both point to itself, or to the opposite loop
+				// since in game engines we really should not have more than two faces connected to the same edge, sorry
+				// (please correct me if I'm wrong and there is an actual requirement for such a thing)
+				Assert.IsTrue(loop.PrevRadialLoopIndex == loop.NextRadialLoopIndex);
+
+				// no other radial loops? both prev/next must point to the loop itself
+				if (loop.PrevRadialLoopIndex == loop.Index)
+					Assert.IsTrue(loop.NextRadialLoopIndex == loop.Index);
+				if (loop.NextRadialLoopIndex == loop.Index)
+					Assert.IsTrue(loop.PrevRadialLoopIndex == loop.Index);
+
 				GMesh.Loop prevRadialLoop = default;
 				Assert.DoesNotThrow(() => { prevRadialLoop = gMesh.GetLoop(loop.PrevRadialLoopIndex); });
+				Assert.IsTrue(prevRadialLoop.IsValid);
 				Assert.AreEqual(loop.Index, prevRadialLoop.NextRadialLoopIndex);
 
 				GMesh.Loop nextRadialLoop = default;
 				Assert.DoesNotThrow(() => { nextRadialLoop = gMesh.GetLoop(loop.NextRadialLoopIndex); });
+				Assert.IsTrue(nextRadialLoop.IsValid);
 				Assert.AreEqual(loop.Index, nextRadialLoop.PrevRadialLoopIndex);
 			}
 		}
 	}
 
-	public static void EdgeElementIndices(GMesh gMesh, bool assertVertexEdges = true)
+	public static void EdgeElementIndices(GMesh gMesh)
 	{
 		var vertexCount = gMesh.VertexCount;
 		var edgeCount = gMesh.EdgeCount;
@@ -120,7 +150,7 @@ public static class Validate
 			var edge = gMesh.GetEdge(i);
 			if (edge.IsValid == false)
 				continue;
-			
+
 			Assert.IsTrue(edge.AVertexIndex >= 0 && edge.AVertexIndex < vertexCount);
 			Assert.IsTrue(edge.BaseLoopIndex >= 0 && edge.BaseLoopIndex < gMesh.LoopCount);
 
@@ -131,48 +161,46 @@ public static class Validate
 			Assert.IsTrue(v0.BaseEdgeIndex >= 0 && v0.BaseEdgeIndex < edgeCount);
 			Assert.IsTrue(v1.BaseEdgeIndex >= 0 && v1.BaseEdgeIndex < edgeCount);
 
-			if (assertVertexEdges)
-			{
-				Assert.IsTrue(edge.APrevEdgeIndex >= 0 && edge.APrevEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.ANextEdgeIndex >= 0 && edge.ANextEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.OPrevEdgeIndex >= 0 && edge.OPrevEdgeIndex < edgeCount);
-				Assert.IsTrue(edge.ONextEdgeIndex >= 0 && edge.ONextEdgeIndex < edgeCount);
+			Assert.IsTrue(edge.APrevEdgeIndex >= 0 && edge.APrevEdgeIndex < edgeCount);
+			Assert.IsTrue(edge.ANextEdgeIndex >= 0 && edge.ANextEdgeIndex < edgeCount);
+			Assert.IsTrue(edge.OPrevEdgeIndex >= 0 && edge.OPrevEdgeIndex < edgeCount);
+			Assert.IsTrue(edge.ONextEdgeIndex >= 0 && edge.ONextEdgeIndex < edgeCount);
 
-				// TODO: verify these assumptions ...
+			// TODO: verify these assumptions ...
 
-				GMesh.Edge v0PrevEdge = default;
-				Assert.DoesNotThrow(() => { v0PrevEdge = gMesh.GetEdge(edge.APrevEdgeIndex); });
-				//Assert.AreEqual(edge.Index, v0PrevEdge.V1NextEdgeIndex);
+			GMesh.Edge v0PrevEdge = default;
+			Assert.DoesNotThrow(() => { v0PrevEdge = gMesh.GetEdge(edge.APrevEdgeIndex); });
+			//Assert.AreEqual(edge.Index, v0PrevEdge.V1NextEdgeIndex);
 
-				GMesh.Edge v0NextEdge = default;
-				Assert.DoesNotThrow(() => { v0NextEdge = gMesh.GetEdge(edge.ANextEdgeIndex); });
-				//Assert.AreEqual(edge.Index, v0NextEdge.V1PrevEdgeIndex);
+			GMesh.Edge v0NextEdge = default;
+			Assert.DoesNotThrow(() => { v0NextEdge = gMesh.GetEdge(edge.ANextEdgeIndex); });
+			//Assert.AreEqual(edge.Index, v0NextEdge.V1PrevEdgeIndex);
 
-				GMesh.Edge v1PrevEdge = default;
-				Assert.DoesNotThrow(() => { v1PrevEdge = gMesh.GetEdge(edge.OPrevEdgeIndex); });
-				//Assert.AreEqual(edge.Index, v1PrevEdge.V0NextEdgeIndex);
+			GMesh.Edge v1PrevEdge = default;
+			Assert.DoesNotThrow(() => { v1PrevEdge = gMesh.GetEdge(edge.OPrevEdgeIndex); });
+			//Assert.AreEqual(edge.Index, v1PrevEdge.V0NextEdgeIndex);
 
-				GMesh.Edge v1NextEdge = default;
-				Assert.DoesNotThrow(() => { v1NextEdge = gMesh.GetEdge(edge.ONextEdgeIndex); });
-				//Assert.AreEqual(edge.Index, v1NextEdge.V0PrevEdgeIndex);
-			}
+			GMesh.Edge v1NextEdge = default;
+			Assert.DoesNotThrow(() => { v1NextEdge = gMesh.GetEdge(edge.ONextEdgeIndex); });
+			//Assert.AreEqual(edge.Index, v1NextEdge.V0PrevEdgeIndex);
 		}
 	}
 
 	public static void VertexElementIndices(GMesh gMesh)
 	{
 		var vertexCount = gMesh.VertexCount;
+		var edgeCount = gMesh.EdgeCount;
 		for (var i = 0; i < vertexCount; i++)
 		{
 			var vertex = gMesh.GetVertex(i);
 			if (vertex.IsValid == false)
 				continue;
-			
-			var firstEdgeIndex = vertex.BaseEdgeIndex;
-			Assert.IsTrue(firstEdgeIndex >= 0 && firstEdgeIndex < vertexCount);
+
+			var baseEdgeIndex = vertex.BaseEdgeIndex;
+			Assert.IsTrue(baseEdgeIndex >= 0 && baseEdgeIndex < edgeCount, $"baseEdgeIndex >= 0 && baseEdgeIndex < edgeCount => {vertex}");
 
 			GMesh.Edge edge = default;
-			Assert.DoesNotThrow(() => { edge = gMesh.GetEdge(firstEdgeIndex); });
+			Assert.DoesNotThrow(() => { edge = gMesh.GetEdge(baseEdgeIndex); });
 			Assert.IsTrue(edge.IsConnectedToVertex(i));
 		}
 	}
@@ -188,14 +216,14 @@ public static class Validate
 		for (var i = 0; i < gMesh.LoopCount; i++)
 			Assert.AreEqual(i, gMesh.GetLoop(i).Index);
 	}
-	
+
 	public static int GetEdgeCycleCount(GMesh gMesh, int vertexIndex)
 	{
-		int count = 0;
+		var count = 0;
 		gMesh.ForEachEdge(vertexIndex, edge => count++);
 		return count;
 	}
-	
+
 	public static void CreateBMeshForComparison(IList<float3> vertices)
 	{
 		var bmesh = new BMesh();

@@ -237,51 +237,5 @@ namespace CodeSmile.GMesh
 				SetEdge(next1Edge);
 			}
 		}
-
-		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);
-		//private void RemoveEdge(int index) => _edges.RemoveAt(index);
-		//private void RemoveLoop(int index) => _loops.RemoveAt(index);
-		//private void RemoveFace(int index) => _faces.RemoveAt(index);
-
-		private void InvalidateVertex(int index)
-		{
-			var vertex = GetVertex(index);
-			Debug.Assert(vertex.Index > UnsetIndex, $"already invalidated {index}: {vertex}");
-			Debug.Assert(_vertexCount > 0);
-			vertex.Invalidate();
-			_vertices[index] = vertex;
-			_vertexCount--;
-		}
-
-		private void InvalidateEdge(int index)
-		{
-			var edge = GetEdge(index);
-			Debug.Assert(edge.Index > UnsetIndex, $"already invalidated {index}: {edge}");
-			Debug.Assert(_edgeCount > 0);
-			edge.Invalidate();
-			_edges[index] = edge;
-			_edgeCount--;
-		}
-
-		private void InvalidateLoop(int index)
-		{
-			var loop = GetLoop(index);
-			Debug.Assert(loop.Index > UnsetIndex, $"already invalidated {index}: {loop}");
-			Debug.Assert(_loopCount > 0);
-			loop.Invalidate();
-			_loops[index] = loop;
-			_loopCount--;
-			Debug.Assert(_loopCount >= 0);
-		}
-
-		private void InvalidateFace(int index)
-		{
-			var face = GetFace(index);
-			Debug.Assert(face.Index > UnsetIndex, $"already invalidated {index}: {face}");
-			Debug.Assert(_faceCount > 0);
-			face.Invalidate();
-			_faces[index] = face;
-			_faceCount--;
-		}
 	}
 }

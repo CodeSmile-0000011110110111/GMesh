@@ -22,23 +22,6 @@ namespace CodeSmile.GMesh
 		private int _faceCount;
 
 		/// <summary>
-		/// Number of vertices in the mesh.
-		/// </summary>
-		public int VertexCount => _vertexCount;
-		/// <summary>
-		/// Number of edges in the mesh.
-		/// </summary>
-		public int EdgeCount => _edgeCount;
-		/// <summary>
-		/// Number of loops in the mesh.
-		/// </summary>
-		public int LoopCount => _loopCount;
-		/// <summary>
-		/// Number of faces in the mesh.
-		/// </summary>
-		public int FaceCount => _faceCount;
-
-		/// <summary>
 		/// The read-only collection of vertices.
 		/// </summary>
 		public NativeArray<Vertex>.ReadOnly Vertices => _vertices.AsParallelReader();
@@ -54,6 +37,23 @@ namespace CodeSmile.GMesh
 		/// The read-only collection of faces.
 		/// </summary>
 		public NativeArray<Face>.ReadOnly Faces => _faces.AsParallelReader();
+
+		/// <summary>
+		/// Number of vertices in the mesh.
+		/// </summary>
+		public int VertexCount => _vertexCount;
+		/// <summary>
+		/// Number of edges in the mesh.
+		/// </summary>
+		public int EdgeCount => _edgeCount;
+		/// <summary>
+		/// Number of loops in the mesh.
+		/// </summary>
+		public int LoopCount => _loopCount;
+		/// <summary>
+		/// Number of faces in the mesh.
+		/// </summary>
+		public int FaceCount => _faceCount;
 
 		/// <summary>
 		/// Check if the GMesh needs disposing. For developers who get easily confused. :)
@@ -151,6 +151,91 @@ namespace CodeSmile.GMesh
 		/// </summary>
 		/// <param name="f"></param>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _faces[f.Index] = f;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddVertex(ref Vertex vertex)
+		{
+			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
+			vertex.Index = _vertices.Length;
+			_vertices.Add(vertex);
+			_vertexCount++;
+			return vertex.Index;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddEdge(ref Edge edge)
+		{
+			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
+			edge.Index = _edges.Length;
+			_edges.Add(edge);
+			_edgeCount++;
+			return edge.Index;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddLoop(ref Loop loop)
+		{
+			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
+			loop.Index = _loops.Length;
+			_loops.Add(loop);
+			_loopCount++;
+			return loop.Index;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int AddFace(ref Face face)
+		{
+			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
+			face.Index = _faces.Length;
+			_faces.Add(face);
+			_faceCount++;
+			return face.Index;
+		}
+		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);
+		//private void RemoveEdge(int index) => _edges.RemoveAt(index);
+		//private void RemoveLoop(int index) => _loops.RemoveAt(index);
+		//private void RemoveFace(int index) => _faces.RemoveAt(index);
+
+		private void InvalidateVertex(int index)
+		{
+			var vertex = GetVertex(index);
+			Debug.Assert(vertex.Index > UnsetIndex, $"already invalidated {index}: {vertex}");
+			Debug.Assert(_vertexCount > 0);
+			vertex.Invalidate();
+			_vertices[index] = vertex;
+			_vertexCount--;
+		}
+
+		private void InvalidateEdge(int index)
+		{
+			var edge = GetEdge(index);
+			Debug.Assert(edge.Index > UnsetIndex, $"already invalidated {index}: {edge}");
+			Debug.Assert(_edgeCount > 0);
+			edge.Invalidate();
+			_edges[index] = edge;
+			_edgeCount--;
+		}
+
+		private void InvalidateLoop(int index)
+		{
+			var loop = GetLoop(index);
+			Debug.Assert(loop.Index > UnsetIndex, $"already invalidated {index}: {loop}");
+			Debug.Assert(_loopCount > 0);
+			loop.Invalidate();
+			_loops[index] = loop;
+			_loopCount--;
+			Debug.Assert(_loopCount >= 0);
+		}
+
+		private void InvalidateFace(int index)
+		{
+			var face = GetFace(index);
+			Debug.Assert(face.Index > UnsetIndex, $"already invalidated {index}: {face}");
+			Debug.Assert(_faceCount > 0);
+			face.Invalidate();
+			_faces[index] = face;
+			_faceCount--;
+		}
 
 		private void RemoveInvalidatedElements()
 		{

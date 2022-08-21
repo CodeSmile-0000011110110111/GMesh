@@ -51,18 +51,36 @@ namespace CodeSmile.GMesh
 					var totalVertexCount = face.ElementCount;
 					var firstVertexIndex = (uint)meshVertices.Length;
 					var currentVertex = (uint)0;
+					var abDirNormal = float3.zero;
+					var acDirNormal = float3.zero;
+					var vertCount = 0;
 
-					if (totalVertexCount > 4)
-						Debug.LogWarning("Note: Faces with more than 4 vertices have to be convex - no convex checks are performed");
-
-					{
+					
 						// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
 						// => only guaranteed to work with convex shapes
 						ForEachLoop(faceIndex, loop =>
 						{
 							var loopVert = GetVertex(loop.StartVertexIndex);
+							
+							/*
+							if (vertCount == 1)
+								abDirNormal = math.normalize(loopVert.Position - meshVertices[(int)firstVertexIndex].Position);
+							else if (vertCount == 2)
+							{
+								acDirNormal = math.normalize(loopVert.Position - meshVertices[(int)firstVertexIndex].Position);
+
+								// 3 points on a line => skip this point
+								var lengthSquared = math.lengthsq(abDirNormal - acDirNormal);
+								Debug.Log($"length {lengthSquared} => ({abDirNormal} - {acDirNormal})");
+								//if (lengthSquared < GridSize) return;
+							}
+							vertCount++;
+							*/
+
 							if (currentVertex > 2)
 							{
+								// previous points
+
 								// add extra fan triangles from first vertex to last vertex
 								meshIndices.Add(firstVertexIndex);
 								meshIndices.Add(firstVertexIndex + currentVertex - 1);
@@ -70,133 +88,32 @@ namespace CodeSmile.GMesh
 
 							meshIndices.Add(firstVertexIndex + currentVertex);
 							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero));
+
 							currentVertex++;
 						});
-						
+
 						// TODO: try triangle strip triangulation
 						// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
 						// https://en.wikipedia.org/wiki/Triangle_strip
-					}
-
-
 					
-					/*
-					else if (triangulationApproach >= 1)
-					{
-						// Approach #2: triangles created in sequence, then gaps are closed
-						ForEachLoop(face, loop =>
-						{
-							var loopVert = GetVertex(loop.VertexIndex);
-							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, loopVert.Normal, loop.UV));
-							var triangleIndex = firstVertexIndex + currentVertex;
-							meshIndices.Add(triangleIndex);
-
-							currentVertex++;
-
-							if (totalVertexCount > 3)
-							{
-								var isEvenVertex = currentVertex % 2 == 1;
-								if (isEvenVertex)
-								{
-									// keep the even indices to close the inner triangles afterwards
-									if (totalVertexCount > 4)
-										innerFaceTriangleIndices.Add(triangleIndex);
-
-									// duplicate every even-numbered index (except for first/last) when face has more than 1 triangle
-									if (currentVertex != 1 && currentVertex < totalVertexCount)
-										meshIndices.Add(triangleIndex);
-								}
-							}
-						});
-
-						// faces with even-numbered vertices need to close the last triangle by connecting to first vertex
-						if (currentVertex % 2 == 0)
-							meshIndices.Add(firstVertexIndex);
-
-						// create inner triangles
-						var innerCount = innerFaceTriangleIndices.Length;
-						if (innerCount >= 3)
-						{
-							for (var i = 0; i < innerCount; i++)
-							{
-								meshIndices.Add(innerFaceTriangleIndices[i]);
-
-								// duplicate every other index
-								if (innerCount > 3 && i != 0 && i % 2 == 0)
-									meshIndices.Add(innerFaceTriangleIndices[i]);
-							}
-							
-							// again: even numbered vertex count => close last triangle by connecting to first vertex
-							if (innerCount % 2 == 0)
-								meshIndices.Add(firstVertexIndex);
-						}
-					}
-					*/
-
-					//innerFaceTriangleIndices.Clear();
-
-					// TEST summation of triangles
-					/*
-					int tri = 1;
-					for (int i = 0; i < meshIndices.Length; i+=3)
-					{
-						var v0 = meshVertices[(int)meshIndices[i+0]].Position;
-						var v1 = meshVertices[(int)meshIndices[i+1]].Position;
-						var v2 = meshVertices[(int)meshIndices[i+2]].Position;
-
-						var cw = IsClockwise(v0, v1, v2);
-
-						var e0 = v1 - v0;
-						var e1 = v2 - v1;
-						var e2 = v0 - v2;
-
-						var ea = v1 - v0;
-						var eb = v2 - v0;
-						var eNormal = math.cross(ea, eb);
-						var w = math.dot(eNormal, v0 - math.forward());
-						var eNormalSum = math.csum(eNormal);
-						
-						var cross0 = math.cross(e0, math.forward());
-						var cross1 = math.cross(e1, math.forward());
-						var cross2 = math.cross(e2, math.forward());
-
-						var l0 = math.length(cross0);
-						var l1 = math.length(cross1);
-						var l2 = math.length(cross2);
-						var sum = l0+l1+l2;
-						//{e0}/{e1}/{e2} =>  => {l0} / {l1} / {l2}
-						//Debug.Log($"Tri {tri} => Sum: {sum}, eN: {eNormal}, eNm: {math.csum(eNormal)}, w: {w}");
-						tri++;
-					}
-					*/
 				}
 
-				//innerFaceTriangleIndices.Dispose();
-
-				/*
-				// FIXME HACK: fix correct index count if something breaks
-				var expectedIndexCount = (meshVertices.Length - 2) * 3;
-				for (var i = meshIndices.Length; i < expectedIndexCount; i++)
-				{
-					Debug.LogWarning("FIXME: added missing index to prevent crash");
-					meshIndices.Add(0);
-				}
-				*/
-
-				/*
-				for (int i = 0; i < meshIndices.Length; i+=3)
-				{
-					var i0 = (int) meshIndices[i];
-					var i1 = (int)meshIndices[i+1];
-					var i2 = (int)meshIndices[i+2];
-					var v0 = meshVertices[i0].Position;
-					var v1 = meshVertices[i1].Position;
-					var v2 = meshVertices[i2].Position;
-					Debug.Log($"Tri: {i0}-{i1}-{i2} => {v0}-{v1}-{v2}");
-				}
-				*/
-				
 				//throw new Exception();
+
+				/*
+				Debug.Log($"Tri count: {meshIndices.Length / 3f}, Index count: {meshIndices.Length}, Vertex count: {meshVertices.Length}");
+				var triCount = 0;
+				for (var i = 0; i < meshIndices.Length; i++)
+				{
+					triCount++;
+					if (triCount == 3)
+					{
+						triCount = 0;
+						Debug.Log($"Tri: {meshVertices[(int)meshIndices[i - 2]].Position} => " +
+						          $"{meshVertices[(int)meshIndices[i - 1]].Position} => {meshVertices[(int)meshIndices[i]].Position}");
+					}
+				}
+				*/
 
 				// VERTEX BUFFER
 				meshData.SetVertexBufferParams(meshVertices.Length, VertexPositionNormalUV.Attributes);
@@ -247,7 +164,7 @@ namespace CodeSmile.GMesh
 
 		private struct VertexPositionNormalUV
 		{
-			public float3 Position;
+			public readonly float3 Position;
 			public float3 Normal;
 			public float2 UV;
 

@@ -32,14 +32,14 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public float3 CalculateFaceCentroid(int faceIndex) => CalculateFaceCentroid(GetFace(faceIndex));
+		public float3 CalculateFaceCentroid(int faceIndex) => CalculateCentroid(GetFace(faceIndex));
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public float3 CalculateFaceCentroid(in Face face)
+		public float3 CalculateCentroid(in Face face)
 		{
 			if (face.IsValid == false)
 				throw new ArgumentException("face has been invalidated");
-				
+
 			var sumOfVertexPositions = float3.zero;
 			var loopCount = 0;
 			ForEachLoop(face, loop =>
@@ -52,14 +52,14 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public float3 CalculateEdgeCenter(int edgeIndex) => CalculateEdgeCenter(GetEdge(edgeIndex));
+		public float3 CalculateEdgeCenter(int edgeIndex) => CalculateCenter(GetEdge(edgeIndex));
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public float3 CalculateEdgeCenter(in Edge edge)
+		public float3 CalculateCenter(in Edge edge)
 		{
 			if (edge.IsValid == false)
 				throw new ArgumentException("edge has been invalidated");
-				
+
 			return CalculateCenter(edge.AVertexIndex, edge.OVertexIndex);
 		}
 
@@ -72,5 +72,13 @@ namespace CodeSmile.GMesh
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public float3 CalculateCenter(float3 pos0, float3 pos1) => pos0 + (pos1 - pos0) * 0.5f;
 
+		public int CalculateEdgeCount(int vertexIndex) => CalculateEdgeCount(GetVertex(vertexIndex));
+
+		public int CalculateEdgeCount(in Vertex vertex)
+		{
+			var edgeCount = 0;
+			ForEachEdge(vertex, e => edgeCount++);
+			return edgeCount;
+		}
 	}
 }

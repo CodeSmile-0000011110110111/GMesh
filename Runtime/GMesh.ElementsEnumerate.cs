@@ -36,6 +36,32 @@ namespace CodeSmile.GMesh
 		public void ForEachLoop(in Face face, Action<Loop> callback) => ForEachLoopInternal(face, callback, null);
 
 		/// <summary>
+		/// Enumerates over all radial loops around an edge.
+		/// </summary>
+		/// <param name="edgeIndex"></param>
+		/// <param name="predicate"></param>
+		public void ForEachRadialLoop(int edgeIndex, Predicate<Loop> predicate) => ForEachRadialLoopInternal(GetEdge(edgeIndex), null, predicate);
+		/// <summary>
+		/// Enumerates over all radial loops around an edge.
+		/// </summary>
+		/// <param name="edge"></param>
+		/// <param name="predicate"></param>
+		public void ForEachRadialLoop(in Edge edge, Predicate<Loop> predicate) => ForEachRadialLoopInternal(edge, null, predicate);
+		/// <summary>
+		/// Enumerates over all radial loops around an edge.
+		/// </summary>
+		/// <param name="edgeIndex"></param>
+		/// <param name="callback"></param>
+		public void ForEachRadialLoop(int edgeIndex, Action<Loop> callback) => ForEachRadialLoopInternal(GetEdge(edgeIndex), callback, null);
+		/// <summary>
+		/// Enumerates over all radial loops around an edge.
+		/// </summary>
+		/// <param name="edge"></param>
+		/// <param name="callback"></param>
+		public void ForEachRadialLoop(in Edge edge, Action<Loop> callback) => ForEachRadialLoopInternal(edge, callback, null);
+
+		
+		/// <summary>
 		/// Enumerates over all edges of a vertex. Return true from predicate to break out of loop early.
 		/// </summary>
 		/// <param name="vertexIndex">index of the vertex whose edges to enumerate</param>
@@ -71,6 +97,7 @@ namespace CodeSmile.GMesh
 				var firstLoopIndex = face.FirstLoopIndex;
 				var loop = GetLoop(firstLoopIndex);
 				var usePredicate = predicate != null;
+				var maxIterations = 10000;
 				do
 				{
 					if (usePredicate)
@@ -82,10 +109,43 @@ namespace CodeSmile.GMesh
 						callback.Invoke(loop);
 
 					loop = GetLoop(loop.NextLoopIndex);
+					
+					maxIterations--;
+					if (maxIterations == 0)
+						throw new Exception($"{nameof(ForEachLoopInternal)}: possible infinite loop due to malformed mesh graph around {loop}");
+					
 				} while (loop.IsValid && loop.Index != firstLoopIndex);
 			}
 		}
 
+		private void ForEachRadialLoopInternal(in Edge edge, Action<Loop> callback, Predicate<Loop> predicate)
+		{
+			if (edge.IsValid)
+			{
+				var firstLoopIndex = edge.BaseLoopIndex;
+				var loop = GetLoop(firstLoopIndex);
+				var usePredicate = predicate != null;
+				var maxIterations = 10000;
+				do
+				{
+					if (usePredicate)
+					{
+						if (predicate.Invoke(loop))
+							break;
+					}
+					else
+						callback.Invoke(loop);
+
+					loop = GetLoop(loop.NextRadialLoopIndex);
+
+					maxIterations--;
+					if (maxIterations == 0)
+						throw new Exception($"{nameof(ForEachRadialLoopInternal)}: possible infinite loop due to malformed mesh graph around {loop}");
+					
+				} while (loop.IsValid && loop.Index != firstLoopIndex);
+			}
+		}
+		
 		private void ForEachEdgeInternal(in Vertex vertex, Action<Edge> callback, Predicate<Edge> predicate)
 		{
 			// assumption: if a vertex is valid and has an edge index, its edge is supposed to be valid
@@ -93,6 +153,7 @@ namespace CodeSmile.GMesh
 			{
 				var edge = GetEdge(vertex.BaseEdgeIndex);
 				var usePredicate = predicate != null;
+				var maxIterations = 10000;
 				do
 				{
 					if (usePredicate)
@@ -104,6 +165,11 @@ namespace CodeSmile.GMesh
 						callback.Invoke(edge);
 
 					edge = GetEdge(edge.GetNextEdgeIndex(vertex.Index));
+					
+					maxIterations--;
+					if (maxIterations == 0)
+						throw new Exception($"{nameof(ForEachEdgeInternal)}: possible infinite loop due to malformed mesh graph around {edge}");
+
 				} while (edge.IsValid && edge.Index != vertex.BaseEdgeIndex);
 			}
 		}

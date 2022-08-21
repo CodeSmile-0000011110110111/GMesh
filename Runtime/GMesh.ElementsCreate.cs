@@ -92,23 +92,23 @@ namespace CodeSmile.GMesh
 
 		/// <summary>
 		/// Creates a new edge using two vertex indices (must exist).
-		///
+		/// 
 		/// Note: This is a low-level operation. Prefer to use Euler operators or CreateFace/DeleteFace methods.
 		/// Note: does not prevent creation of duplicate edges (two or more edges sharing the same vertices).
 		/// </summary>
-		/// <param name="v0Index"></param>
-		/// <param name="v1Index"></param>
+		/// <param name="vertexIndexA"></param>
+		/// <param name="vertexIndexO"></param>
 		/// <returns>index of the new edge</returns>
-		public int CreateEdge(int v0Index, int v1Index)
+		public int CreateEdge(int vertexIndexA, int vertexIndexO)
 		{
 			// avoid edge duplication: if there is already an edge between edge[0] and edge[1] vertices, return existing edge instead
-			var existingEdgeIndex = FindEdgeIndex(v0Index, v1Index);
+			var existingEdgeIndex = FindEdgeIndex(vertexIndexA, vertexIndexO);
 			if (existingEdgeIndex != UnsetIndex)
 				return existingEdgeIndex;
 
-			var edge = Edge.Create(v0Index, v1Index);
+			var edge = Edge.Create(vertexIndexA, vertexIndexO);
 			var edgeIndex = AddEdge(ref edge);
-			CreateEdgeInternal_UpdateEdgeCycle(ref edge, v0Index, v1Index);
+			CreateEdgeInternal_UpdateEdgeCycle(ref edge, vertexIndexA, vertexIndexO);
 			return edgeIndex;
 		}
 
@@ -247,13 +247,13 @@ namespace CodeSmile.GMesh
 			SetEdge(edge);
 		}
 
-		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
+		private int CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
 		{
 			var newLoopIndex = LoopCount;
 			var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
 			var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
 			var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
-			AddLoop(ref loop);
+			return AddLoop(ref loop);
 		}
 
 		private void CreateLoopsInternal(int faceIndex, int[] edgeIndices, IEnumerable<int> vertexIndices)
@@ -281,9 +281,16 @@ namespace CodeSmile.GMesh
 				prevRadialLoopIndex = edgeLoop.Index;
 				nextRadialLoopIndex = edgeLoop.NextRadialLoopIndex;
 
-				var nextRadialLoop = GetLoop(edgeLoop.NextRadialLoopIndex);
-				nextRadialLoop.PrevRadialLoopIndex = newLoopIndex;
-				SetLoop(nextRadialLoop);
+				if (edgeLoop.NextRadialLoopIndex == edgeLoop.Index)
+				{
+					edgeLoop.PrevRadialLoopIndex = newLoopIndex;
+				}
+				else
+				{
+					var nextRadialLoop = GetLoop(edgeLoop.NextRadialLoopIndex);
+					nextRadialLoop.PrevRadialLoopIndex = newLoopIndex;
+					SetLoop(nextRadialLoop);
+				}
 
 				edgeLoop.NextRadialLoopIndex = newLoopIndex;
 				SetLoop(edgeLoop);
@@ -327,44 +334,5 @@ namespace CodeSmile.GMesh
 			return (prevLoopIndex, nextLoopIndex);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddVertex(ref Vertex vertex)
-		{
-			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
-			vertex.Index = _vertices.Length;
-			_vertices.Add(vertex);
-			_vertexCount++;
-			return vertex.Index;
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddEdge(ref Edge edge)
-		{
-			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
-			edge.Index = _edges.Length;
-			_edges.Add(edge);
-			_edgeCount++;
-			return edge.Index;
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddLoop(ref Loop loop)
-		{
-			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
-			loop.Index = _loops.Length;
-			_loops.Add(loop);
-			_loopCount++;
-			return loop.Index;
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddFace(ref Face face)
-		{
-			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
-			face.Index = _faces.Length;
-			_faces.Add(face);
-			_faceCount++;
-			return face.Index;
-		}
 	}
 }

@@ -1,6 +1,7 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Burst;
@@ -113,20 +114,13 @@ namespace CodeSmile.GMesh
 			public bool IsValid => Index != UnsetIndex;
 
 			/// <summary>
-			/// Access vertex A and O by their indices.
+			/// Access vertex A and O by their indices (0 or 1).
 			/// </summary>
-			/// <param name="index">Returns A's index if index is 0, for all other values O's index is returned.</param>
-			public int this[int index] => index == 0 ? AVertexIndex : OVertexIndex;
-
-			/// <summary>
-			/// Given a vertex index, returns the opposite vertex index.
-			/// Ie if the given index is A's index, this method will return O's index. In all other cases it returns A's index.
-			/// CAUTION: There is no check if the given vertexIndex is part of the edge!
-			/// </summary>
-			/// <param name="vertexIndex">one of the two vertex indexes of the edge</param>
-			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			public int GetOppositeVertexIndex(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex : AVertexIndex;
+			/// <param name="index">Returns A's index if index is 0. Returns O's index if index is 1.
+			/// Throws IndexOutOfRangeException for all other indices.</param>
+			public int this[int index] => index == 0 ? AVertexIndex :
+				index == 1 ? OVertexIndex :
+				throw new IndexOutOfRangeException("only indices 0 and 1 allowed");
 
 			/// <summary>
 			/// Checks if the edge is connected to the vertex with the given index.
@@ -156,12 +150,47 @@ namespace CodeSmile.GMesh
 			public bool IsConnectingVertices(in Edge otherEdge) => IsConnectingVertices(otherEdge.AVertexIndex, otherEdge.OVertexIndex);
 
 			/// <summary>
+			/// Given a vertex index, returns the opposite vertex index.
+			/// Ie if the given index is A's index, this method will return O's index. In all other cases it returns A's index.
+			/// CAUTION: There is no check if the given vertexIndex is part of the edge!
+			/// </summary>
+			/// <param name="vertexIndex">one of the two vertex indexes of the edge</param>
+			/// <param name="noThrow">If true, will not throw exception if vertexIndex is neither A nor O.</param>
+			/// <returns></returns>
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public int GetOppositeVertexIndex(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex :
+				vertexIndex == OVertexIndex ? AVertexIndex :
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
+
+			/// <summary>
+			/// Returns the vertex index that both edges connect to.
+			/// Note: It is assumed they share a common vertex. If not an InvalidOperationException is thrown.
+			/// </summary>
+			/// <param name="otherEdge"></param>
+			/// <returns></returns>
+			public int GetConnectingVertexIndex(in Edge otherEdge) =>
+				AVertexIndex == otherEdge.AVertexIndex ? AVertexIndex : otherEdge.GetOppositeVertexIndex(AVertexIndex);
+
+			/// <summary>
 			/// Given a vertex index, returns the previous edge connected to that vertex.
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? APrevEdgeIndex : OPrevEdgeIndex;
+			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? APrevEdgeIndex :
+				vertexIndex == OVertexIndex ? OPrevEdgeIndex :
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
+
+			/// <summary>
+			/// Returns both prev and next edge indices for the given vertex.
+			/// </summary>
+			/// <param name="vertexIndex"></param>
+			/// <returns></returns>
+			/// <exception cref="InvalidOperationException">Thrown if the vertexIndex is not linked to this edge</exception>
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public (int, int) GetPrevAndNextEdgeIndices(int vertexIndex) => vertexIndex == AVertexIndex ? (APrevEdgeIndex, ANextEdgeIndex) :
+				vertexIndex == OVertexIndex ? (OPrevEdgeIndex, ONextEdgeIndex) :
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
 
 			/// <summary>
 			/// Given a vertex index, returns the next edge connected to that vertex.
@@ -169,11 +198,16 @@ namespace CodeSmile.GMesh
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? ANextEdgeIndex : ONextEdgeIndex;
+			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? ANextEdgeIndex :
+				vertexIndex == OVertexIndex ? ONextEdgeIndex :
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
 
-			public override string ToString() => $"Edge [{Index}] with Verts [{AVertexIndex}, {OVertexIndex}], Loop [{BaseLoopIndex}], " +
-			                                     $"V0 Prev/Next [{APrevEdgeIndex}]<>[{ANextEdgeIndex}], " +
-			                                     $"V1 Prev/Next [{OPrevEdgeIndex}]<>[{ONextEdgeIndex}]";
+			public override string ToString() => $"Edge [{Index}] with Verts A[{AVertexIndex}], O[{OVertexIndex}], " +
+			                                     $"A <{APrevEdgeIndex}°{ANextEdgeIndex}>, " +
+			                                     $"O <{OPrevEdgeIndex}°{ONextEdgeIndex}>, " +
+			                                     $"Loop [{BaseLoopIndex}]";
+
+			internal int GetOppositeVertexIndexNoThrow(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex : AVertexIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void SetPrevEdgeIndex(int vertexIndex, int otherEdgeIndex)
@@ -187,6 +221,36 @@ namespace CodeSmile.GMesh
 			{
 				if (vertexIndex == AVertexIndex) ANextEdgeIndex = otherEdgeIndex;
 				else ONextEdgeIndex = otherEdgeIndex;
+			}
+
+			/*
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal void SetPrevAndNextEdgeIndex(int vertexIndex, int prevEdgeIndex, int nextEdgeIndex)
+			{
+				SetPrevEdgeIndex(vertexIndex, prevEdgeIndex);
+				SetNextEdgeIndex(vertexIndex, nextEdgeIndex);
+			}
+			*/
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal void SetPrevAndNextEdge(int vertexIndex, in Edge targetEdge)
+			{
+				SetPrevEdgeIndex(vertexIndex, targetEdge.Index);
+				SetNextEdgeIndex(vertexIndex, targetEdge.Index);
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal void CopyPrevAndNextEdge(int vertexIndex, in Edge sourceEdge)
+			{
+				SetPrevEdgeIndex(vertexIndex, sourceEdge.GetPrevEdgeIndex(vertexIndex));
+				SetNextEdgeIndex(vertexIndex, sourceEdge.GetNextEdgeIndex(vertexIndex));
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal void SetOppositeVertexIndex(int oppositeVertexIndex, int newVertexIndex)
+			{
+				if (oppositeVertexIndex == AVertexIndex) OVertexIndex = newVertexIndex;
+				else AVertexIndex = newVertexIndex;
 			}
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -253,9 +317,17 @@ namespace CodeSmile.GMesh
 			/// </summary>
 			public bool IsValid => Index != UnsetIndex;
 
+			/// <summary>
+			/// Returns true if the loop is on a border (no other radial loops, just itself).
+			/// </summary>
+			/// <returns></returns>
+			public bool IsBorderLoop() => Index == PrevRadialLoopIndex && Index == NextRadialLoopIndex;
+
 			public override string ToString() => $"Loop [{Index}] of Face [{FaceIndex}], Edge [{EdgeIndex}], Vertex [{StartVertexIndex}], " +
-			                                     $"Prev/Next [{PrevLoopIndex}]<>[{NextLoopIndex}], " +
-			                                     $"Radial Prev/Next [{PrevRadialLoopIndex}]<>[{NextRadialLoopIndex}]";
+			                                     $"Loop <{PrevLoopIndex}°{NextLoopIndex}>, Radial <{PrevRadialLoopIndex}°{NextRadialLoopIndex}>";
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal void SetPrevAndNextRadialLoopIndices(int loopIndex) => PrevRadialLoopIndex = NextRadialLoopIndex = loopIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void Invalidate() => Index = UnsetIndex;

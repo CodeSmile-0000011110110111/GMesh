@@ -2,7 +2,6 @@ using CodeSmile.GMesh;
 using System;
 using System.Collections;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 [ExecuteInEditMode]
@@ -17,9 +16,12 @@ public class GMeshTestBehaviour : MonoBehaviour
 	[SerializeField] private PlaneParameters _planeParameters = new();
 	[SerializeField] private CubeParameters _cubeParameters = new();
 
+	[Header("Euler Operators")]
+	[Range(0, 9)] [SerializeField] private int _edgeTesselation = 0;
+
 	[Header("Debug")]
 	public bool _logToConsole;
-	public GMesh.DebugDrawElements _debugDrawElements;
+	public GMesh.DebugDrawElements _debugDrawElements = 0;
 
 	private int _prevTriangulationApproach;
 	private int _prevVertexCount;
@@ -88,10 +90,17 @@ public class GMeshTestBehaviour : MonoBehaviour
 		DisposeGMesh();
 
 		_gMesh = CreatePrimitive();
-		
+
+		for (var t = 0; t < _edgeTesselation; t++)
+		{
+			var edgeCount = _gMesh.EdgeCount;
+			for (var i = 0; i < edgeCount; i++)
+				_gMesh.SplitEdgeAndCreateVertex(i);
+		}
+
 		if (_logToConsole)
 			_gMesh.DebugLogAllElements();
-		
+
 		_meshFilter.sharedMesh = _gMesh.ToMesh();
 	}
 

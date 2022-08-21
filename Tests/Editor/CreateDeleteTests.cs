@@ -114,9 +114,8 @@ public sealed class CreateDeleteTests
 	{
 		using (var mesh = new GMesh())
 		{
-			Validate.CreateBMeshForComparison(Constants.TriangleVertices);
+			//Validate.CreateBMeshForComparison(Constants.TriangleVertices);
 			Assert.DoesNotThrow(() => { mesh.CreateFace(Constants.TriangleVertices); });
-			//_gMesh.DebugLogAllElements();
 			var elementCount = Constants.TriangleVertices.Length;
 			Validate.MeshElementCount(mesh, 1, elementCount, elementCount, elementCount);
 			Assert.AreEqual(2, mesh.GetEdge(0).APrevEdgeIndex);
@@ -144,7 +143,6 @@ public sealed class CreateDeleteTests
 		using (var mesh = new GMesh())
 		{
 			Assert.DoesNotThrow(() => { mesh.CreateFace(Constants.QuadVertices); });
-			//_gMesh.DebugLogAllElements();
 			var elementCount = Constants.QuadVertices.Length;
 			Validate.MeshElementCount(mesh, 1, elementCount, elementCount, elementCount);
 			Assert.AreEqual(3, mesh.GetEdge(0).APrevEdgeIndex);
@@ -202,8 +200,6 @@ public sealed class CreateDeleteTests
 		{
 			Assert.DoesNotThrow(() => { mesh.CreateFace(Constants.TriangleVertices); });
 			Assert.DoesNotThrow(() => { mesh.CreateFace(Constants.TriangleVertices2); });
-			//_gMesh.DebugLogAllElements("TWO TRIANGLES");
-
 			var elementCount = Constants.TriangleVertices.Length + Constants.TriangleVertices2.Length;
 			Validate.MeshElementCount(mesh, 2, elementCount, elementCount, elementCount);
 			Validate.AllElementsAndRelations(mesh);
