@@ -3,7 +3,6 @@
 
 using CodeSmile.GMesh;
 using NUnit.Framework;
-using System.Collections.Generic;
 using Tests.Editor;
 using Unity.Mathematics;
 
@@ -66,8 +65,7 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(mesh);
 		}
 	}
-	
-	
+
 	[Test]
 	public void SplitAllEdges_Cube()
 	{
@@ -84,7 +82,7 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(mesh);
 		}
 	}
-	
+
 	[Test]
 	public void SplitAllEdgesMultipleTimes_Cube()
 	{
@@ -94,14 +92,42 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(mesh);
 
 			// CAUTION: keep iteration count minimal since edge count doubles with every iteration
-			for (int o = 0; o < 3; o++)
+			for (var o = 0; o < 3; o++)
 			{
 				// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
 				var edgeCount = mesh.EdgeCount;
 				for (var i = 0; i < edgeCount; i++)
 					mesh.SplitEdgeAndCreateVertex(i);
 			}
-			
+
+			Validate.AllElementsAndRelations(mesh);
+		}
+	}
+
+	[Test]
+	public void SplitAllEdgesTwice_3Planes()
+	{
+		// Cube did not preserve correct loop order when splitting, this is the minimal test case where it occured
+		// between: face 1 + 2, along edges: 5, 23, 14, 32 / vertices: 1, 21, 12, 30, 5
+		// two loops connect 1=>21 and 21=>5 hopping over neighbouring edges, loop 19 is one of them
+		var vertexCount = new int3(2);
+		var f = GMesh.Plane(new PlaneParameters(vertexCount.xy, new float3(0f, 0f, 0.5f), new float3(0f, 180f, 0f)));
+		var u = GMesh.Plane(new PlaneParameters(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
+		var r = GMesh.Plane(new PlaneParameters(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
+		using (var mesh = GMesh.Combine(new[] { f, u, r }, true))
+		{
+			Validate.AllElementsAndRelations(mesh);
+
+			// CAUTION: keep iteration count minimal since edge count doubles with every iteration
+			for (var o = 0; o < 2; o++)
+			{
+				// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
+				var edgeCount = mesh.EdgeCount;
+				for (var i = 0; i < edgeCount; i++)
+					mesh.SplitEdgeAndCreateVertex(i);
+			}
+
+			mesh.DebugLogAllElements();
 			Validate.AllElementsAndRelations(mesh);
 		}
 	}

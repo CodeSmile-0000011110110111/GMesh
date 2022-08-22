@@ -18,10 +18,11 @@ namespace CodeSmile.GMesh
 			EdgeCycles = 1 << 2,
 			Loops = 1 << 3,
 			LoopsDrawWinding = 1 << 4,
-			LoopCycles = 1 << 5,
-			Faces = 1 << 6,
+			LoopsDrawRelations = 1 << 5,
+			LoopCycles = 1 << 6,
+			Faces = 1 << 7,
 
-			DrawIndices = 1 << 7,
+			DrawIndices = 1 << 8,
 
 			Default = Vertices | Edges | Faces,
 		}
@@ -78,9 +79,11 @@ namespace CodeSmile.GMesh
 			if (drawElements.HasFlag(DebugDrawElements.EdgeCycles))
 				DebugDrawEdgeCycleGizmos(transform, textStyle, drawIndices);
 
+			var drawWinding = drawElements.HasFlag(DebugDrawElements.LoopsDrawWinding);
+			var drawRelations = drawElements.HasFlag(DebugDrawElements.LoopsDrawRelations);
 			textStyle.normal.textColor = loopColor;
 			if (drawElements.HasFlag(DebugDrawElements.Loops))
-				DebugDrawLoopGizmos(transform, textStyle, drawIndices, drawElements.HasFlag(DebugDrawElements.LoopsDrawWinding));
+				DebugDrawLoopGizmos(transform, textStyle, drawIndices, drawWinding, drawRelations);
 			textStyle.normal.textColor = loopCyclesColor;
 			if (drawElements.HasFlag(DebugDrawElements.LoopCycles))
 				DebugDrawLoopCycleGizmos(transform, textStyle, drawIndices);
@@ -220,8 +223,8 @@ namespace CodeSmile.GMesh
 					if (drawIndices)
 					{
 						style.fontSize += -prevNextFontSizeOffset;
-						var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 3f;
-						var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 3f;
+						var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 5f;
+						var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 5f;
 						Handles.Label(textEdgeV0, "V0", style);
 						Handles.Label(textEdgeV1, "V1", style);
 						if (e.APrevEdgeIndex != e.ANextEdgeIndex)
@@ -257,7 +260,8 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawLoopGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false, bool drawLineToNext = false)
+		public void DebugDrawLoopGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false, bool drawWinding = false,
+			bool drawRelations = false)
 		{
 			try
 			{
@@ -294,7 +298,10 @@ namespace CodeSmile.GMesh
 						loopCenter += (centroid - loopCenter) * loopBulge;
 						if (drawIndices)
 						{
-							Handles.Label(loopCenter, $"{l.Index}", style); //<{l.PrevLoopIndex}°{l.NextLoopIndex}>
+							// P/N: <{l.PrevLoopIndex}°{l.NextLoopIndex}>, 
+							var relations = drawRelations ? $"  E: {l.EdgeIndex}, V: {l.StartVertexIndex}" : "";
+							//var randPos = Random.CreateFromIndex(7).NextFloat3Direction() * 0.2f;
+							Handles.Label(loopCenter, $"{l.Index}{relations}", style);
 						}
 
 						// mark the start of the loop 
@@ -304,7 +311,7 @@ namespace CodeSmile.GMesh
 							Handles.DrawBezier(toCenter, vStart, toCenter, vStart, lineColor, null, lineThickness + 2f);
 						}
 
-						if (drawLineToNext)
+						if (drawWinding)
 						{
 							var toNextLineThickness = 1.5f;
 							var vStartIndex2 = nextLoop.StartVertexIndex;

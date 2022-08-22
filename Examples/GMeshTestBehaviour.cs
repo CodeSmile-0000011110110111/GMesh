@@ -1,6 +1,7 @@
 using CodeSmile.GMesh;
 using System;
 using System.Collections;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 
@@ -30,6 +31,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 	//private PlaneParameters _planeParameters = new();
 	private MeshFilter _meshFilter;
 	private GMesh _gMesh;
+	private Transform _centroidMarker;
 
 	private void OnEnable()
 	{
@@ -102,6 +104,27 @@ public class GMeshTestBehaviour : MonoBehaviour
 			_gMesh.DebugLogAllElements();
 
 		_meshFilter.sharedMesh = _gMesh.ToMesh();
+
+		UpdateCentroidMarker();
+	}
+
+	private void UpdateCentroidMarker()
+	{
+		const string markerName = "Centroid Marker";
+		if (_centroidMarker == null)
+		{
+			_centroidMarker = GameObject.Find(markerName)?.transform;
+			if (_centroidMarker == null)
+			{
+				_centroidMarker = GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Sphere).transform;
+				_centroidMarker.localScale = new float3(0.02f);
+				_centroidMarker.parent = transform;
+				_centroidMarker.name = markerName;
+				_centroidMarker.GetComponent<MeshRenderer>().sharedMaterial = null;
+			}
+		}
+
+		_centroidMarker.position = _gMesh.CalculateCentroid();
 	}
 
 	private GMesh CreatePrimitive() => _primitiveType switch

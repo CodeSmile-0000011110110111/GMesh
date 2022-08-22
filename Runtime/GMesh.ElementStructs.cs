@@ -128,7 +128,7 @@ namespace CodeSmile.GMesh
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			public bool IsConnectedToVertex(int vertexIndex) => vertexIndex == AVertexIndex || vertexIndex == OVertexIndex;
+			public bool ContainsVertex(int vertexIndex) => vertexIndex == AVertexIndex || vertexIndex == OVertexIndex;
 
 			/// <summary>
 			/// Checks if the edge is connecting the two vertices given bei their index.
@@ -150,8 +150,7 @@ namespace CodeSmile.GMesh
 			public bool IsConnectingVertices(in Edge otherEdge) => IsConnectingVertices(otherEdge.AVertexIndex, otherEdge.OVertexIndex);
 
 			/// <summary>
-			/// Given a vertex index, returns the opposite vertex index.
-			/// Ie if the given index is A's index, this method will return O's index. In all other cases it returns A's index.
+			/// Given a vertex index, returns the vertex index at the opposite end of the edge.
 			/// CAUTION: There is no check if the given vertexIndex is part of the edge!
 			/// </summary>
 			/// <param name="vertexIndex">one of the two vertex indexes of the edge</param>
@@ -164,12 +163,15 @@ namespace CodeSmile.GMesh
 
 			/// <summary>
 			/// Returns the vertex index that both edges connect to.
-			/// Note: It is assumed they share a common vertex. If not an InvalidOperationException is thrown.
+			/// Note: It is assumed they share a common vertex.
 			/// </summary>
 			/// <param name="otherEdge"></param>
-			/// <returns></returns>
+			/// <returns>the vertex index both connect to, or UnsetIndex if they do not connect</returns>
 			public int GetConnectingVertexIndex(in Edge otherEdge) =>
-				AVertexIndex == otherEdge.AVertexIndex ? AVertexIndex : otherEdge.GetOppositeVertexIndex(AVertexIndex);
+				AVertexIndex == otherEdge.AVertexIndex ? AVertexIndex :
+				AVertexIndex == otherEdge.OVertexIndex ? AVertexIndex : 
+				OVertexIndex == otherEdge.AVertexIndex ? OVertexIndex :
+				OVertexIndex == otherEdge.OVertexIndex ? OVertexIndex : UnsetIndex;
 
 			/// <summary>
 			/// Given a vertex index, returns the previous edge connected to that vertex.
@@ -182,17 +184,6 @@ namespace CodeSmile.GMesh
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
 
 			/// <summary>
-			/// Returns both prev and next edge indices for the given vertex.
-			/// </summary>
-			/// <param name="vertexIndex"></param>
-			/// <returns></returns>
-			/// <exception cref="InvalidOperationException">Thrown if the vertexIndex is not linked to this edge</exception>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			public (int, int) GetPrevAndNextEdgeIndices(int vertexIndex) => vertexIndex == AVertexIndex ? (APrevEdgeIndex, ANextEdgeIndex) :
-				vertexIndex == OVertexIndex ? (OPrevEdgeIndex, ONextEdgeIndex) :
-				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
-
-			/// <summary>
 			/// Given a vertex index, returns the next edge connected to that vertex.
 			/// </summary>
 			/// <param name="vertexIndex"></param>
@@ -202,9 +193,20 @@ namespace CodeSmile.GMesh
 				vertexIndex == OVertexIndex ? ONextEdgeIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
 
+			/// <summary>
+			/// Returns both prev and next edge indices for the given vertex.
+			/// </summary>
+			/// <param name="vertexIndex"></param>
+			/// <returns></returns>
+			/// <exception cref="InvalidOperationException">Thrown if the vertexIndex is not linked to this edge</exception>
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public (int, int) GetDiskCycleIndices(int vertexIndex) => vertexIndex == AVertexIndex ? (APrevEdgeIndex, ANextEdgeIndex) :
+				vertexIndex == OVertexIndex ? (OPrevEdgeIndex, ONextEdgeIndex) :
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
+
 			public override string ToString() => $"Edge [{Index}] with Verts A[{AVertexIndex}], O[{OVertexIndex}], " +
-			                                     $"A <{APrevEdgeIndex}°{ANextEdgeIndex}>, " +
-			                                     $"O <{OPrevEdgeIndex}°{ONextEdgeIndex}>, " +
+			                                     $"Cycle A <{APrevEdgeIndex}°{ANextEdgeIndex}>, " +
+			                                     $"Cycle O <{OPrevEdgeIndex}°{ONextEdgeIndex}>, " +
 			                                     $"Loop [{BaseLoopIndex}]";
 
 			internal int GetOppositeVertexIndexNoThrow(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex : AVertexIndex;
@@ -223,24 +225,15 @@ namespace CodeSmile.GMesh
 				else ONextEdgeIndex = otherEdgeIndex;
 			}
 
-			/*
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			internal void SetPrevAndNextEdgeIndex(int vertexIndex, int prevEdgeIndex, int nextEdgeIndex)
+			internal void SetDiskCycleIndices(int vertexIndex, int edgeIndex)
 			{
-				SetPrevEdgeIndex(vertexIndex, prevEdgeIndex);
-				SetNextEdgeIndex(vertexIndex, nextEdgeIndex);
-			}
-			*/
-
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			internal void SetPrevAndNextEdge(int vertexIndex, in Edge targetEdge)
-			{
-				SetPrevEdgeIndex(vertexIndex, targetEdge.Index);
-				SetNextEdgeIndex(vertexIndex, targetEdge.Index);
+				SetPrevEdgeIndex(vertexIndex, edgeIndex);
+				SetNextEdgeIndex(vertexIndex, edgeIndex);
 			}
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			internal void CopyPrevAndNextEdge(int vertexIndex, in Edge sourceEdge)
+			internal void CopyDiskCycleIndices(int vertexIndex, in Edge sourceEdge)
 			{
 				SetPrevEdgeIndex(vertexIndex, sourceEdge.GetPrevEdgeIndex(vertexIndex));
 				SetNextEdgeIndex(vertexIndex, sourceEdge.GetNextEdgeIndex(vertexIndex));
@@ -324,10 +317,10 @@ namespace CodeSmile.GMesh
 			public bool IsBorderLoop() => Index == PrevRadialLoopIndex && Index == NextRadialLoopIndex;
 
 			public override string ToString() => $"Loop [{Index}] of Face [{FaceIndex}], Edge [{EdgeIndex}], Vertex [{StartVertexIndex}], " +
-			                                     $"Loop <{PrevLoopIndex}°{NextLoopIndex}>, Radial <{PrevRadialLoopIndex}°{NextRadialLoopIndex}>";
+			                                     $"Cycle <{PrevLoopIndex}°{NextLoopIndex}>, Radial <{PrevRadialLoopIndex}°{NextRadialLoopIndex}>";
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			internal void SetPrevAndNextRadialLoopIndices(int loopIndex) => PrevRadialLoopIndex = NextRadialLoopIndex = loopIndex;
+			internal void SetRadialLoopIndices(int loopIndex) => PrevRadialLoopIndex = NextRadialLoopIndex = loopIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void Invalidate() => Index = UnsetIndex;
