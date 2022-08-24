@@ -4,9 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Unity.Mathematics;
-using UnityEngine;
 
 namespace CodeSmile.GMesh
 {
@@ -14,7 +12,7 @@ namespace CodeSmile.GMesh
 	{
 		/// <summary>
 		/// Creates a new face using existing vertices. Adds edges and loops by using the supplied vertices.
-		/// A face must have at least 3 vertices (triangle) but it can be any number of vertices.
+		/// A face should have at least 3 vertices (triangle) but it can be any number of vertices.
 		/// 
 		/// Note: no check is performed to ensure the vertex positions all lie on the same plane. Upon triangulation
 		/// (convert to Unity Mesh) such a face would not be represented as a single plane.
@@ -23,13 +21,8 @@ namespace CodeSmile.GMesh
 		/// <returns>the index of the new face</returns>
 		public int CreateFace(IEnumerable<int> vertexIndices)
 		{
-			if (vertexIndices == null)
-				throw new ArgumentNullException(nameof(vertexIndices));
-
+			EnsureValidVertexCollection(vertexIndices);
 			var vertexCount = vertexIndices.Count();
-			if (vertexCount < 3)
-				throw new ArgumentException($"Face must have 3 or more vertices, got only {vertexCount}", nameof(vertexIndices));
-
 			var edgeIndices = CreateEdges(vertexIndices);
 			var face = Face.Create(vertexCount);
 			var faceIndex = AddFace(ref face);
@@ -46,12 +39,28 @@ namespace CodeSmile.GMesh
 		/// </summary>
 		/// <param name="vertexPositions">3 or more vertex positions in CLOCKWISE winding order</param>
 		/// <returns>the index of the new face</returns>
-		public int CreateFace(IEnumerable<float3> vertexPositions) => CreateFace(CreateVertices(vertexPositions));
+		public int CreateFace(IEnumerable<float3> vertexPositions)
+		{
+			EnsureValidVertexCollection(vertexPositions);
+			return CreateFace(CreateVertices(vertexPositions));
+		}
+
+		private void EnsureValidVertexCollection<T>(IEnumerable<T> vertices)
+		{
+			if (vertices == null)
+				throw new ArgumentNullException(nameof(vertices));
+
+			var vertexCount = vertices.Count();
+			if (vertexCount == 0)
+				throw new ArgumentException("no point in creating a face with no points");
+			if (vertexCount < 3)
+				throw new ArgumentException($"face with only {vertexCount} vertices is technically possible but reasonably nonsensical");
+		}
 
 		/*
 		/// <summary>
 		/// Creates multiple faces at once, under the assumption that all faces use the same number of vertices.
-		/// Faces are not connected however, it requires an extra call to MergeNearbyVertices().
+		/// Faces are not connected, vertices on the same position are not merged.
 		/// </summary>
 		/// <param name="vertexPositions"></param>
 		/// <param name="vertexCountPerFace"></param>
@@ -282,9 +291,7 @@ namespace CodeSmile.GMesh
 				nextRadialLoopIndex = edgeLoop.NextRadialLoopIndex;
 
 				if (edgeLoop.NextRadialLoopIndex == edgeLoop.Index)
-				{
 					edgeLoop.PrevRadialLoopIndex = newLoopIndex;
-				}
 				else
 				{
 					var nextRadialLoop = GetLoop(edgeLoop.NextRadialLoopIndex);
@@ -333,6 +340,5 @@ namespace CodeSmile.GMesh
 
 			return (prevLoopIndex, nextLoopIndex);
 		}
-
 	}
 }

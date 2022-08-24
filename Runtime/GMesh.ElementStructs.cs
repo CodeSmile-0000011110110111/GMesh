@@ -181,7 +181,7 @@ namespace CodeSmile.GMesh
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? APrevEdgeIndex :
 				vertexIndex == OVertexIndex ? OPrevEdgeIndex :
-				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by {this}");
 
 			/// <summary>
 			/// Given a vertex index, returns the next edge connected to that vertex.
@@ -191,7 +191,7 @@ namespace CodeSmile.GMesh
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? ANextEdgeIndex :
 				vertexIndex == OVertexIndex ? ONextEdgeIndex :
-				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
+				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by {this}");
 
 			/// <summary>
 			/// Returns both prev and next edge indices for the given vertex.
@@ -233,7 +233,7 @@ namespace CodeSmile.GMesh
 			}
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			internal void CopyDiskCycleIndices(int vertexIndex, in Edge sourceEdge)
+			internal void CopyDiskCycleFrom(int vertexIndex, in Edge sourceEdge)
 			{
 				SetPrevEdgeIndex(vertexIndex, sourceEdge.GetPrevEdgeIndex(vertexIndex));
 				SetNextEdgeIndex(vertexIndex, sourceEdge.GetNextEdgeIndex(vertexIndex));
@@ -250,13 +250,13 @@ namespace CodeSmile.GMesh
 			internal void Invalidate() => Index = UnsetIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			internal static Edge Create(int vert0Index, int vert1Index, int loopIndex = UnsetIndex,
-				int vert0PrevEdgeIndex = UnsetIndex, int vert0NextEdgeIndex = UnsetIndex,
-				int vert1PrevEdgeIndex = UnsetIndex, int vert1NextEdgeIndex = UnsetIndex) => new()
+			internal static Edge Create(int aVertIndex, int oVertIndex, int loopIndex = UnsetIndex,
+				int aPrevEdgeIndex = UnsetIndex, int aNextEdgeIndex = UnsetIndex,
+				int oPrevEdgeIndex = UnsetIndex, int oNextEdgeIndex = UnsetIndex) => new()
 			{
-				Index = UnsetIndex, BaseLoopIndex = loopIndex, AVertexIndex = vert0Index, OVertexIndex = vert1Index,
-				APrevEdgeIndex = vert0PrevEdgeIndex, ANextEdgeIndex = vert0NextEdgeIndex,
-				OPrevEdgeIndex = vert1PrevEdgeIndex, ONextEdgeIndex = vert1NextEdgeIndex,
+				Index = UnsetIndex, BaseLoopIndex = loopIndex, AVertexIndex = aVertIndex, OVertexIndex = oVertIndex,
+				APrevEdgeIndex = aPrevEdgeIndex, ANextEdgeIndex = aNextEdgeIndex,
+				OPrevEdgeIndex = oPrevEdgeIndex, ONextEdgeIndex = oNextEdgeIndex,
 			};
 		}
 
@@ -368,7 +368,7 @@ namespace CodeSmile.GMesh
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void Invalidate() => Index = UnsetIndex;
-
+			
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal static Face Create(int itemCount, int firstLoopIndex = UnsetIndex, int materialIndex = 0) => new()
 				{ Index = UnsetIndex, FirstLoopIndex = firstLoopIndex, ElementCount = itemCount };

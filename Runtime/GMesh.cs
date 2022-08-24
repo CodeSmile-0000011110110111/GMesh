@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Mathematics;
 
 namespace CodeSmile.GMesh
@@ -35,7 +34,7 @@ namespace CodeSmile.GMesh
 	/// Note: Implementation closely follows Blender's BMesh and its C# port UnityBMesh (which is not Job System compatible).
 	/// </summary>
 	[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
-	public sealed partial class GMesh : IDisposable
+	public sealed partial class GMesh : IDisposable, ICloneable, IEquatable<GMesh>
 	{
 		/// <summary>
 		/// This is used to indicate that the index referencing another element hasn't been set yet.
@@ -56,9 +55,35 @@ namespace CodeSmile.GMesh
 		/// </summary>
 		private static readonly double GridUpscale = 1.0 / GridSize; // inverse of grid size (eg 0.001 => 1000)
 
+		public static bool operator ==(GMesh left, GMesh right) => Equals(left, right);
+		public static bool operator !=(GMesh left, GMesh right) => !Equals(left, right);
+
 		/// <summary>
 		/// Creates an empty GMesh.
 		/// </summary>
 		public GMesh() {}
+
+		/// <summary>
+		/// Copy constructor. Creates an instance of GMesh that is the exact copy of another mesh.
+		/// </summary>
+		/// <param name="other"></param>
+		public GMesh(GMesh other)
+		{
+			_pivot = other._pivot;
+			_vertexCount = other._vertexCount;
+			_edgeCount = other._edgeCount;
+			_loopCount = other._loopCount;
+			_faceCount = other._faceCount;
+			_vertices.AddRange(other._vertices);
+			_edges.AddRange(other._edges);
+			_loops.AddRange(other._loops);
+			_faces.AddRange(other._faces);
+		}
+
+		/// <summary>
+		/// Creates a GMesh with a single face using the supplied triangles. Same as calling CreateFace(vertexPositions) on an empty GMesh.
+		/// </summary>
+		/// <param name="vertexPositions"></param>
+		public GMesh(IEnumerable<float3> vertexPositions) => CreateFace(vertexPositions);
 	}
 }

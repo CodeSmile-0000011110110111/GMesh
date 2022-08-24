@@ -9,7 +9,7 @@ namespace CodeSmile.GMesh
 {
 	public sealed partial class GMesh
 	{
-		internal static readonly float DefaultScale = 1f;
+		public const float DefaultScale = 1f;
 
 		private float3 _pivot = float3.zero;
 

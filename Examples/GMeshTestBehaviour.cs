@@ -14,11 +14,13 @@ public class GMeshTestBehaviour : MonoBehaviour
 
 	[Header("Primitive Parameters")]
 	[SerializeField] private PrimitiveType _primitiveType;
+	[Range(3, 60)] [SerializeField] private int _polygonVertexCount = 3;
+	[Range(0.01f, 1000f)] [SerializeField] private float _polygonScale = 1f;
 	[SerializeField] private PlaneParameters _planeParameters = new();
 	[SerializeField] private CubeParameters _cubeParameters = new();
 
 	[Header("Euler Operators")]
-	[Range(0, 9)] [SerializeField] private int _edgeTesselation = 0;
+	[Range(0, 9)] [SerializeField] private int _edgeTesselation;
 
 	[Header("Debug")]
 	public bool _logToConsole;
@@ -103,6 +105,13 @@ public class GMeshTestBehaviour : MonoBehaviour
 		if (_logToConsole)
 			_gMesh.DebugLogAllElements();
 
+		#if GMESH_VALIDATION
+		_gMesh.ValidateFaces();
+		_gMesh.ValidateLoops();
+		_gMesh.ValidateEdges();
+		_gMesh.ValidateVertices();
+		#endif
+
 		_meshFilter.sharedMesh = _gMesh.ToMesh();
 
 		UpdateCentroidMarker();
@@ -124,11 +133,14 @@ public class GMeshTestBehaviour : MonoBehaviour
 			}
 		}
 
-		_centroidMarker.position = _gMesh.CalculateCentroid();
+		_centroidMarker.localPosition = _gMesh.CalculateCentroid();
 	}
 
 	private GMesh CreatePrimitive() => _primitiveType switch
 	{
+		PrimitiveType.Triangle => GMesh.Triangle(_polygonScale),
+		PrimitiveType.Quad => GMesh.Quad(_polygonScale),
+		PrimitiveType.Polygon => GMesh.Polygon(_polygonVertexCount, _polygonScale),
 		PrimitiveType.Plane => GMesh.Plane(_planeParameters),
 		PrimitiveType.Cube => GMesh.Cube(_cubeParameters),
 		_ => throw new NotSupportedException(_primitiveType.ToString()),
@@ -136,6 +148,9 @@ public class GMeshTestBehaviour : MonoBehaviour
 
 	private enum PrimitiveType
 	{
+		Triangle,
+		Quad,
+		Polygon,
 		Plane,
 		Cube,
 	}

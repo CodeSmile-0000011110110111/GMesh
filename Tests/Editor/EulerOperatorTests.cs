@@ -5,107 +5,135 @@ using CodeSmile.GMesh;
 using NUnit.Framework;
 using Tests.Editor;
 using Unity.Mathematics;
+using UnityEngine;
 
 [TestFixture]
 public class EulerOperatorTests
 {
-	[Test]
-	public void SplitAllEdges_1Triangle()
+	[Test] public void SplitEdge_1Triangle()
 	{
-		using (var mesh = new GMesh())
+		using (var gMesh = GMesh.Triangle())
 		{
-			Assert.DoesNotThrow(() => { mesh.CreateFace(Constants.TriangleVertices); });
-			Validate.AllElementsAndRelations(mesh);
+			var edgeIndex = 0;
+			var edgeBeforeSplit = gMesh.GetEdge(edgeIndex);
+			var newEdgeIndex = gMesh.SplitEdgeAndCreateVertex(edgeIndex);
+			var newEdge = gMesh.GetEdge(newEdgeIndex);
+			var edgeAfterSplit = gMesh.GetEdge(edgeIndex);
 
-			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = mesh.EdgeCount;
-			for (var i = 0; i < edgeCount; i++)
-				mesh.SplitEdgeAndCreateVertex(i);
-
-			mesh.DebugLogAllElements();
-			Assert.AreEqual(1, mesh.FaceCount);
-			Assert.AreEqual(6, mesh.GetFace(0).ElementCount);
-			Validate.AllElementsAndRelations(mesh);
+			Debug.Log($"before: {edgeBeforeSplit}\nafter : {edgeAfterSplit}\nnew edge: {newEdge}\n");
+			gMesh.DebugLogAllElements();
+			Validate.AllElementsAndRelations(gMesh);
 		}
 	}
 
-	[Test]
-	public void SplitAllEdges_1Hexagon()
+	[Test] public void SplitAllEdges_1Triangle()
 	{
-		using (var mesh = new GMesh())
+		using (var gMesh = GMesh.Triangle())
 		{
-			Assert.DoesNotThrow(() => { mesh.CreateFace(Constants.HexagonVertices); });
-			Validate.AllElementsAndRelations(mesh);
+			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = mesh.EdgeCount;
+			var edgeCount = gMesh.EdgeCount;
 			for (var i = 0; i < edgeCount; i++)
-				mesh.SplitEdgeAndCreateVertex(i);
+				gMesh.SplitEdgeAndCreateVertex(i);
 
-			mesh.DebugLogAllElements();
-			Assert.AreEqual(1, mesh.FaceCount);
-			Assert.AreEqual(12, mesh.GetFace(0).ElementCount);
-			Validate.AllElementsAndRelations(mesh);
+			gMesh.DebugLogAllElements();
+			Assert.AreEqual(1, gMesh.FaceCount);
+			Assert.AreEqual(6, gMesh.GetFace(0).ElementCount);
+			Validate.AllElementsAndRelations(gMesh);
 		}
 	}
 
-	[Test]
-	public void SplitAllEdges_4x4Plane()
+	[Test] public void SplitAllEdges_1Quad()
 	{
-		using (var mesh = GMesh.Plane(new PlaneParameters(new int2(4))))
+		using (var gMesh = GMesh.Quad())
 		{
-			Validate.MeshElementCount(mesh, 9, 36, 24, 16);
-			Validate.AllElementsAndRelations(mesh);
+			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = mesh.EdgeCount;
+			var edgeCount = gMesh.EdgeCount;
 			for (var i = 0; i < edgeCount; i++)
-				mesh.SplitEdgeAndCreateVertex(i);
+				gMesh.SplitEdgeAndCreateVertex(i);
 
-			Validate.AllElementsAndRelations(mesh);
+			gMesh.DebugLogAllElements();
+			Assert.AreEqual(1, gMesh.FaceCount);
+			Assert.AreEqual(8, gMesh.GetFace(0).ElementCount);
+			Validate.AllElementsAndRelations(gMesh);
 		}
 	}
 
-	[Test]
-	public void SplitAllEdges_Cube()
+	[Test] public void SplitAllEdges_1Hexagon()
 	{
-		using (var mesh = GMesh.Cube(new CubeParameters(new int3(3))))
+		using (var gMesh = new GMesh())
 		{
-			Validate.MeshElementCount(mesh, 24, 96, 48, 26);
-			Validate.AllElementsAndRelations(mesh);
+			Assert.DoesNotThrow(() => { gMesh.CreateFace(Constants.HexagonVertices); });
+			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = mesh.EdgeCount;
+			var edgeCount = gMesh.EdgeCount;
 			for (var i = 0; i < edgeCount; i++)
-				mesh.SplitEdgeAndCreateVertex(i);
+				gMesh.SplitEdgeAndCreateVertex(i);
 
-			Validate.AllElementsAndRelations(mesh);
+			gMesh.DebugLogAllElements();
+			Assert.AreEqual(1, gMesh.FaceCount);
+			Assert.AreEqual(12, gMesh.GetFace(0).ElementCount);
+			Validate.AllElementsAndRelations(gMesh);
 		}
 	}
 
-	[Test]
-	public void SplitAllEdgesMultipleTimes_Cube()
+	[Test] public void SplitAllEdges_4x4Plane()
 	{
-		using (var mesh = GMesh.Cube(new CubeParameters(new int3(3))))
+		using (var gMesh = GMesh.Plane(new PlaneParameters(new int2(4))))
 		{
-			Validate.MeshElementCount(mesh, 24, 96, 48, 26);
-			Validate.AllElementsAndRelations(mesh);
+			Validate.MeshElementCount(gMesh, 9, 36, 24, 16);
+			Validate.AllElementsAndRelations(gMesh);
+
+			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
+			var edgeCount = gMesh.EdgeCount;
+			for (var i = 0; i < edgeCount; i++)
+				gMesh.SplitEdgeAndCreateVertex(i);
+
+			Validate.AllElementsAndRelations(gMesh);
+		}
+	}
+
+	[Test] public void SplitAllEdges_Cube()
+	{
+		using (var gMesh = GMesh.Cube(new CubeParameters(new int3(3))))
+		{
+			Validate.MeshElementCount(gMesh, 24, 96, 48, 26);
+			Validate.AllElementsAndRelations(gMesh);
+
+			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
+			var edgeCount = gMesh.EdgeCount;
+			for (var i = 0; i < edgeCount; i++)
+				gMesh.SplitEdgeAndCreateVertex(i);
+
+			Validate.AllElementsAndRelations(gMesh);
+		}
+	}
+
+	[Test] public void SplitAllEdgesMultipleTimes_Cube()
+	{
+		using (var gMesh = GMesh.Cube(new CubeParameters(new int3(3))))
+		{
+			Validate.MeshElementCount(gMesh, 24, 96, 48, 26);
+			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: keep iteration count minimal since edge count doubles with every iteration
 			for (var o = 0; o < 3; o++)
 			{
 				// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-				var edgeCount = mesh.EdgeCount;
+				var edgeCount = gMesh.EdgeCount;
 				for (var i = 0; i < edgeCount; i++)
-					mesh.SplitEdgeAndCreateVertex(i);
+					gMesh.SplitEdgeAndCreateVertex(i);
 			}
 
-			Validate.AllElementsAndRelations(mesh);
+			Validate.AllElementsAndRelations(gMesh);
 		}
 	}
 
-	[Test]
-	public void SplitAllEdgesTwice_3Planes()
+	[Test] public void SplitAllEdgesTwice_3Planes()
 	{
 		// Cube did not preserve correct loop order when splitting, this is the minimal test case where it occured
 		// between: face 1 + 2, along edges: 5, 23, 14, 32 / vertices: 1, 21, 12, 30, 5
@@ -114,21 +142,21 @@ public class EulerOperatorTests
 		var f = GMesh.Plane(new PlaneParameters(vertexCount.xy, new float3(0f, 0f, 0.5f), new float3(0f, 180f, 0f)));
 		var u = GMesh.Plane(new PlaneParameters(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
 		var r = GMesh.Plane(new PlaneParameters(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
-		using (var mesh = GMesh.Combine(new[] { f, u, r }, true))
+		using (var gMesh = GMesh.Combine(new[] { f, u, r }, true))
 		{
-			Validate.AllElementsAndRelations(mesh);
+			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: keep iteration count minimal since edge count doubles with every iteration
 			for (var o = 0; o < 2; o++)
 			{
 				// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-				var edgeCount = mesh.EdgeCount;
+				var edgeCount = gMesh.EdgeCount;
 				for (var i = 0; i < edgeCount; i++)
-					mesh.SplitEdgeAndCreateVertex(i);
+					gMesh.SplitEdgeAndCreateVertex(i);
 			}
 
-			mesh.DebugLogAllElements();
-			Validate.AllElementsAndRelations(mesh);
+			gMesh.DebugLogAllElements();
+			Validate.AllElementsAndRelations(gMesh);
 		}
 	}
 }

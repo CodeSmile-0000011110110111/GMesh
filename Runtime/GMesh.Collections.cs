@@ -92,12 +92,20 @@ namespace CodeSmile.GMesh
 		public void Dispose()
 		{
 			if (IsDisposed)
-				throw new InvalidOperationException("GMesh has already been disposed. Do not call Dispose() again!");
+				throw new InvalidOperationException("Already disposed! Use IsDisposed property to check disposed state.");
 
 			_vertices.Dispose();
 			_edges.Dispose();
 			_loops.Dispose();
 			_faces.Dispose();
+			_vertices = default;
+			_edges = default;
+			_loops = default;
+			_faces = default;
+			_vertexCount = UnsetIndex;
+			_edgeCount = UnsetIndex;
+			_loopCount = UnsetIndex;
+			_faceCount = UnsetIndex;
 		}
 
 		/// <summary>
@@ -153,7 +161,7 @@ namespace CodeSmile.GMesh
 		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _faces[f.Index] = f;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddVertex(ref Vertex vertex)
+		internal int AddVertex(ref Vertex vertex)
 		{
 			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
 			vertex.Index = _vertices.Length;
@@ -163,7 +171,7 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddEdge(ref Edge edge)
+		internal int AddEdge(ref Edge edge)
 		{
 			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
 			edge.Index = _edges.Length;
@@ -173,7 +181,7 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddLoop(ref Loop loop)
+		internal int AddLoop(ref Loop loop)
 		{
 			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
 			loop.Index = _loops.Length;
@@ -183,7 +191,7 @@ namespace CodeSmile.GMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int AddFace(ref Face face)
+		internal int AddFace(ref Face face)
 		{
 			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
 			face.Index = _faces.Length;
@@ -196,7 +204,7 @@ namespace CodeSmile.GMesh
 		//private void RemoveLoop(int index) => _loops.RemoveAt(index);
 		//private void RemoveFace(int index) => _faces.RemoveAt(index);
 
-		private void InvalidateVertex(int index)
+		internal void InvalidateVertex(int index)
 		{
 			var vertex = GetVertex(index);
 			Debug.Assert(vertex.Index > UnsetIndex, $"already invalidated {index}: {vertex}");
@@ -206,7 +214,7 @@ namespace CodeSmile.GMesh
 			_vertexCount--;
 		}
 
-		private void InvalidateEdge(int index)
+		internal void InvalidateEdge(int index)
 		{
 			var edge = GetEdge(index);
 			Debug.Assert(edge.Index > UnsetIndex, $"already invalidated {index}: {edge}");
@@ -216,7 +224,7 @@ namespace CodeSmile.GMesh
 			_edgeCount--;
 		}
 
-		private void InvalidateLoop(int index)
+		internal void InvalidateLoop(int index)
 		{
 			var loop = GetLoop(index);
 			Debug.Assert(loop.Index > UnsetIndex, $"already invalidated {index}: {loop}");
@@ -227,7 +235,7 @@ namespace CodeSmile.GMesh
 			Debug.Assert(_loopCount >= 0);
 		}
 
-		private void InvalidateFace(int index)
+		internal void InvalidateFace(int index)
 		{
 			var face = GetFace(index);
 			Debug.Assert(face.Index > UnsetIndex, $"already invalidated {index}: {face}");

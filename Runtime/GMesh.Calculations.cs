@@ -3,12 +3,34 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace CodeSmile.GMesh
 {
 	public sealed partial class GMesh
 	{
+		/// <summary>
+		/// Calculates vertices for an n-gon with the given number of vertices and scale where vertices go in clockwise order around
+		/// the center (0,0,0) with first vertex position (0,0,scale).
+		/// </summary>
+		/// <param name="vertexCount"></param>
+		/// <param name="scale"></param>
+		/// <param name="vertices">Returned NativeArray of vertices, caller is responsible for disposing this array.</param>
+		public static void CalculatePolygonVertices(int vertexCount, float scale, out NativeArray<float3> vertices)
+		{
+			if (vertexCount < 2)
+				throw new ArgumentException("N-Gon, like a decent triangle, requires at least 3 vertices");
+
+			vertices = new NativeArray<float3>(vertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			var twoPie = 2f * math.PI; // not 2Pac :)
+			for (var i = 0; i < vertexCount; i++)
+			{
+				var angle = i * twoPie / vertexCount;
+				vertices[i] = math.float3(math.sin(angle) * scale, 0f, math.cos(angle) * scale);
+			}
+		}
+
 		/// <summary>
 		/// Calculates the mesh centroid (average position of all vertices).
 		/// Equals sum of all vertex positions divided by number of vertices. 

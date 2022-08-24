@@ -23,6 +23,7 @@ namespace CodeSmile.GMesh
 			Faces = 1 << 7,
 
 			DrawIndices = 1 << 8,
+			HighlightGraphErrors = 1 << 9,
 
 			Default = Vertices | Edges | Faces,
 		}
@@ -62,35 +63,37 @@ namespace CodeSmile.GMesh
 			var edgeColor = Color.yellow;
 			var loopColor = Color.green;
 			var loopCyclesColor = new Color(0.2f, .8f, 0.2f, 1f);
-			var faceColor = Color.red;
+			var faceColor = Color.magenta;
 
 			var textStyle = new GUIStyle();
 			textStyle.alignment = TextAnchor.UpperCenter;
 			textStyle.normal.textColor = vertColor;
 			textStyle.fontSize = 12;
 
+			var highlightErrors = drawElements.HasFlag(DebugDrawElements.HighlightGraphErrors);
+
 			var drawIndices = drawElements.HasFlag(DebugDrawElements.DrawIndices);
 			if (drawElements.HasFlag(DebugDrawElements.Vertices))
-				DebugDrawVertexGizmos(transform, textStyle, drawIndices);
+				DebugDrawVertexGizmos(transform, textStyle, drawIndices, highlightErrors);
 
 			textStyle.normal.textColor = edgeColor;
 			if (drawElements.HasFlag(DebugDrawElements.Edges))
-				DebugDrawEdgeGizmos(transform, textStyle, drawIndices);
+				DebugDrawEdgeGizmos(transform, textStyle, drawIndices, highlightErrors);
 			if (drawElements.HasFlag(DebugDrawElements.EdgeCycles))
-				DebugDrawEdgeCycleGizmos(transform, textStyle, drawIndices);
+				DebugDrawEdgeCycleGizmos(transform, textStyle, drawIndices, highlightErrors);
 
 			var drawWinding = drawElements.HasFlag(DebugDrawElements.LoopsDrawWinding);
 			var drawRelations = drawElements.HasFlag(DebugDrawElements.LoopsDrawRelations);
 			textStyle.normal.textColor = loopColor;
 			if (drawElements.HasFlag(DebugDrawElements.Loops))
-				DebugDrawLoopGizmos(transform, textStyle, drawIndices, drawWinding, drawRelations);
+				DebugDrawLoopGizmos(transform, textStyle, drawIndices, drawWinding, drawRelations, highlightErrors);
 			textStyle.normal.textColor = loopCyclesColor;
 			if (drawElements.HasFlag(DebugDrawElements.LoopCycles))
-				DebugDrawLoopCycleGizmos(transform, textStyle, drawIndices);
+				DebugDrawLoopCycleGizmos(transform, textStyle, drawIndices, highlightErrors);
 
 			textStyle.normal.textColor = faceColor;
 			if (drawElements.HasFlag(DebugDrawElements.Faces))
-				DebugDrawFaceGizmos(transform, textStyle, drawIndices);
+				DebugDrawFaceGizmos(transform, textStyle, drawIndices, highlightErrors);
 		}
 
 		/// <summary>
@@ -99,7 +102,8 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawVertexGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
+		public void DebugDrawVertexGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false,
+			bool highlightErrors = false)
 		{
 			try
 			{
@@ -136,7 +140,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawEdgeGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
+		public void DebugDrawEdgeGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false, bool highlightErrors = false)
 		{
 			try
 			{
@@ -176,7 +180,8 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawEdgeCycleGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
+		public void DebugDrawEdgeCycleGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false,
+			bool highlightErrors = false)
 		{
 			try
 			{
@@ -194,13 +199,38 @@ namespace CodeSmile.GMesh
 					if (e.IsValid == false)
 						continue;
 
+					string issue = null;
+					var aVertex = GetVertex(e.AVertexIndex);
+					var oVertex = GetVertex(e.OVertexIndex);
+					var v0Pos = math.transform(t, aVertex.Position * scale);
+					var v1Pos = math.transform(t, oVertex.Position * scale);
+					if (highlightErrors)
+					{
+						var position = v0Pos;
+						var foundIssue = ValidateVertexDiskCycle(aVertex, out issue) == false;
+						if (foundIssue == false)
+						{
+							foundIssue = ValidateVertexDiskCycle(oVertex, out issue) == false;
+							if (foundIssue)
+							{
+								position = v1Pos;
+							}
+						}
+
+						if (foundIssue)
+						{
+							lineColor = Color.red;
+							var errorStyle = new GUIStyle();
+							errorStyle.normal.textColor = Color.red;
+							errorStyle.alignment = TextAnchor.MiddleCenter;
+							Handles.Label(position, issue, errorStyle);
+						}
+					}
+
 					var v0PrevEdge = GetEdge(e.APrevEdgeIndex);
 					var v0NextEdge = GetEdge(e.ANextEdgeIndex);
 					var v1NextEdge = GetEdge(e.ONextEdgeIndex);
 					var v1PrevEdge = GetEdge(e.OPrevEdgeIndex);
-
-					var v0Pos = math.transform(t, GetVertex(e.AVertexIndex).Position * scale);
-					var v1Pos = math.transform(t, GetVertex(e.OVertexIndex).Position * scale);
 
 					var edgeCutOff = 0.22f;
 					var edgeDir = (v1Pos - v0Pos) * edgeCutOff;
@@ -261,7 +291,7 @@ namespace CodeSmile.GMesh
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
 		public void DebugDrawLoopGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false, bool drawWinding = false,
-			bool drawRelations = false)
+			bool drawRelations = false, bool highlightErrors = false)
 		{
 			try
 			{
@@ -281,6 +311,15 @@ namespace CodeSmile.GMesh
 						continue;
 
 					var centroid = math.transform(t, CalculateCentroid(f) * scale);
+
+					if (highlightErrors && ValidateFaceLoopCycle(f, out var issue) == false)
+					{
+						lineColor = Color.red;
+						var errorStyle = new GUIStyle();
+						errorStyle.normal.textColor = Color.red;
+						errorStyle.alignment = TextAnchor.MiddleCenter;
+						Handles.Label(centroid, issue, errorStyle);
+					}
 
 					ForEachLoop(f, l =>
 					{
@@ -353,7 +392,8 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawLoopCycleGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
+		public void DebugDrawLoopCycleGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false,
+			bool highlightErrors = false)
 		{
 			try
 			{
@@ -416,7 +456,7 @@ namespace CodeSmile.GMesh
 		/// <param name="transform"></param>
 		/// <param name="style"></param>
 		/// <param name="lineThickness"></param>
-		public void DebugDrawFaceGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false)
+		public void DebugDrawFaceGizmos(UnityEngine.Transform transform, GUIStyle style, bool drawIndices = false, bool highlightErrors = false)
 		{
 			try
 			{
