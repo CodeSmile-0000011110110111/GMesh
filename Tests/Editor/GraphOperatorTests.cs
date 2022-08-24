@@ -1,19 +1,19 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using CodeSmile.GMesh;
+using CodeSmile;
+using CodeSmile.GraphMesh;
 using NUnit.Framework;
 using Unity.Mathematics;
 
 [TestFixture]
 public class GraphOperatorTests
 {
-
 	[Test]
 	public void InsertEdgeInDiskCycleTests()
 	{
 		// plane with 4 quads
-		using (var gMesh = GMesh.Plane(new PlaneParameters(new int2(3))))
+		using (var gMesh = GMesh.Plane(new GMeshPlane(new int2(3))))
 		{
 			Validate.AllElementsAndRelations(gMesh);
 			Assert.AreEqual(4, gMesh.CalculateEdgeCount(4));
@@ -58,7 +58,7 @@ public class GraphOperatorTests
 	public void RemoveEdgeFromDiskCycleTests()
 	{
 		// plane with 4 quads
-		using (var gMesh = GMesh.Plane(new PlaneParameters(new int2(3))))
+		using (var gMesh = GMesh.Plane(new GMeshPlane(new int2(3))))
 		{
 			Validate.AllElementsAndRelations(gMesh);
 			Assert.AreEqual(4, gMesh.CalculateEdgeCount(4));

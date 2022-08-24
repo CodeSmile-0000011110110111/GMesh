@@ -2,10 +2,11 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using Unity.Mathematics;
 using static Unity.Mathematics.math;
 using float3 = Unity.Mathematics.float3;
 
-namespace CodeSmile.GMesh
+namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
@@ -71,7 +72,7 @@ namespace CodeSmile.GMesh
 		/// <param name="parameters"></param>
 		/// <returns></returns>
 		/// <exception cref="ArgumentException"></exception>
-		public static GMesh Plane(PlaneParameters parameters)
+		public static GMesh Plane(GMeshPlane parameters)
 		{
 			if (parameters.VertexCountX < 2 || parameters.VertexCountY < 2)
 				throw new ArgumentException("minimum of 2 vertices per axis required");
@@ -81,7 +82,7 @@ namespace CodeSmile.GMesh
 			var vertices = new float3[vertexCount];
 
 			// create vertices
-			var scale = float3(parameters.Scale, DefaultScale);
+			var scale = float3((float2)parameters.Scale, DefaultScale);
 			var centerOffset = float3(.5f, .5f, 0f) * scale;
 			var step = 1f / float3(subdivisions, 1f) * scale;
 			var vIndex = 0;
@@ -133,15 +134,15 @@ namespace CodeSmile.GMesh
 		/// </summary>
 		/// <param name="parameters"></param>
 		/// <returns></returns>
-		public static GMesh Cube(CubeParameters parameters)
+		public static GMesh Cube(GMeshCube parameters)
 		{
 			var vertexCount = int3(parameters.VertexCountX, parameters.VertexCountY, parameters.VertexCountZ);
-			var b = Plane(new PlaneParameters(vertexCount.xy, float3(0f, 0f, -0.5f), float3(0f, 0f, 0f)));
-			var f = Plane(new PlaneParameters(vertexCount.xy, float3(0f, 0f, 0.5f), float3(0f, 180f, 0f)));
-			var l = Plane(new PlaneParameters(vertexCount.zy, float3(-0.5f, 0f, 0f), float3(0f, 90f, 0f)));
-			var r = Plane(new PlaneParameters(vertexCount.zy, float3(0.5f, 0f, 0f), float3(0f, 270f, 0f)));
-			var u = Plane(new PlaneParameters(vertexCount.xz, float3(0f, 0.5f, 0f), float3(90f, 270f, 270f)));
-			var d = Plane(new PlaneParameters(vertexCount.xz, float3(0f, -0.5f, 0f), float3(270f, 90f, 90f)));
+			var b = Plane(new GMeshPlane(vertexCount.xy, float3(0f, 0f, -0.5f), float3(0f, 0f, 0f)));
+			var f = Plane(new GMeshPlane(vertexCount.xy, float3(0f, 0f, 0.5f), float3(0f, 180f, 0f)));
+			var l = Plane(new GMeshPlane(vertexCount.zy, float3(-0.5f, 0f, 0f), float3(0f, 90f, 0f)));
+			var r = Plane(new GMeshPlane(vertexCount.zy, float3(0.5f, 0f, 0f), float3(0f, 270f, 0f)));
+			var u = Plane(new GMeshPlane(vertexCount.xz, float3(0f, 0.5f, 0f), float3(90f, 270f, 270f)));
+			var d = Plane(new GMeshPlane(vertexCount.xz, float3(0f, -0.5f, 0f), float3(270f, 90f, 90f)));
 			return Combine(new[] { b, f, l, r, u, d }, true);
 		}
 	}

@@ -1,14 +1,15 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using CodeSmile.GraphMesh;
 using System;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace CodeSmile.GMesh
+namespace CodeSmile
 {
 	[Serializable]
-	public class CubeParameters
+	public class GMeshCube
 	{
 		public const int MinVertexCount = 2;
 		public const int MaxVertexCount = 11;
@@ -19,13 +20,13 @@ namespace CodeSmile.GMesh
 		[Range(MinVertexCount, MaxVertexCount)] public int VertexCountZ;
 		public float3 Scale = GMesh.DefaultScale;
 
-		public CubeParameters()
+		public GMeshCube()
 			: this(MinVertexCount, GMesh.DefaultScale) {}
 
-		public CubeParameters(int3 vertexCount)
+		public GMeshCube(int3 vertexCount)
 			: this(vertexCount, GMesh.DefaultScale) {}
 
-		public CubeParameters(int3 vertexCount, float3 scale)
+		public GMeshCube(int3 vertexCount, float3 scale)
 		{
 			SetVertexCount(vertexCount);
 			Scale = scale;

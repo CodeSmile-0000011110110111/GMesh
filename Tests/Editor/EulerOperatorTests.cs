@@ -1,9 +1,9 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using CodeSmile.GMesh;
+using CodeSmile;
+using CodeSmile.GraphMesh;
 using NUnit.Framework;
-using Tests.Editor;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -83,7 +83,7 @@ public class EulerOperatorTests
 
 	[Test] public void SplitAllEdges_4x4Plane()
 	{
-		using (var gMesh = GMesh.Plane(new PlaneParameters(new int2(4))))
+		using (var gMesh = GMesh.Plane(new GMeshPlane(new int2(4))))
 		{
 			Validate.MeshElementCount(gMesh, 9, 36, 24, 16);
 			Validate.AllElementsAndRelations(gMesh);
@@ -99,7 +99,7 @@ public class EulerOperatorTests
 
 	[Test] public void SplitAllEdges_Cube()
 	{
-		using (var gMesh = GMesh.Cube(new CubeParameters(new int3(3))))
+		using (var gMesh = GMesh.Cube(new GMeshCube(new int3(3))))
 		{
 			Validate.MeshElementCount(gMesh, 24, 96, 48, 26);
 			Validate.AllElementsAndRelations(gMesh);
@@ -115,7 +115,7 @@ public class EulerOperatorTests
 
 	[Test] public void SplitAllEdgesMultipleTimes_Cube()
 	{
-		using (var gMesh = GMesh.Cube(new CubeParameters(new int3(3))))
+		using (var gMesh = GMesh.Cube(new GMeshCube(new int3(3))))
 		{
 			Validate.MeshElementCount(gMesh, 24, 96, 48, 26);
 			Validate.AllElementsAndRelations(gMesh);
@@ -139,9 +139,9 @@ public class EulerOperatorTests
 		// between: face 1 + 2, along edges: 5, 23, 14, 32 / vertices: 1, 21, 12, 30, 5
 		// two loops connect 1=>21 and 21=>5 hopping over neighbouring edges, loop 19 is one of them
 		var vertexCount = new int3(2);
-		var f = GMesh.Plane(new PlaneParameters(vertexCount.xy, new float3(0f, 0f, 0.5f), new float3(0f, 180f, 0f)));
-		var u = GMesh.Plane(new PlaneParameters(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
-		var r = GMesh.Plane(new PlaneParameters(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
+		var f = GMesh.Plane(new GMeshPlane(vertexCount.xy, new float3(0f, 0f, 0.5f), new float3(0f, 180f, 0f)));
+		var u = GMesh.Plane(new GMeshPlane(vertexCount.xz, new float3(0f, 0.5f, 0f), new float3(90f, 270f, 270f)));
+		var r = GMesh.Plane(new GMeshPlane(vertexCount.zy, new float3(0.5f, 0f, 0f), new float3(0f, 270f, 0f)));
 		using (var gMesh = GMesh.Combine(new[] { f, u, r }, true))
 		{
 			Validate.AllElementsAndRelations(gMesh);

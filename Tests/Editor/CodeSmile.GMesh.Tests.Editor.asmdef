@@ -1,5 +1,5 @@
 {
-    "name": "CodeSmile.GMesh.Tests.Editor",
+    "name": "CodeSmile.Tests.GMesh.Editor",
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",

@@ -7,7 +7,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace CodeSmile.GMesh
+namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{

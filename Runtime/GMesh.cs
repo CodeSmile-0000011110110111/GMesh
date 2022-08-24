@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Mathematics;
 
-namespace CodeSmile.GMesh
+namespace CodeSmile.GraphMesh
 {
 	/// <summary>
 	/// GMesh - editable mesh geometry, Burst & Job System enabled.

@@ -1,7 +1,8 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using CodeSmile.GMesh;
+using CodeSmile;
+using CodeSmile.GraphMesh;
 using NUnit.Framework;
 using System.Collections.Generic;
 using Unity.Mathematics;
@@ -173,9 +174,11 @@ public static class Validate
 				continue;
 
 			string issue = null;
-			Assert.IsTrue(gMesh.ValidateEdge(edge, out  issue), "basic edge validation failed: " + issue);
-			Assert.IsTrue(gMesh.ValidateVertexDiskCycle(gMesh.GetVertex(edge.AVertexIndex), out  issue), "disk cycle validation failed: " + issue);
-			Assert.IsTrue(gMesh.ValidateVertexDiskCycle(gMesh.GetVertex(edge.OVertexIndex), out  issue), "disk cycle validation failed: " + issue);
+			Assert.IsTrue(gMesh.ValidateEdge(edge, out issue), "basic edge validation failed: " + issue);
+			Assert.IsTrue(gMesh.ValidateVertexDiskCycle(gMesh.GetVertex(edge.AVertexIndex), out issue),
+				"disk cycle validation failed: " + issue);
+			Assert.IsTrue(gMesh.ValidateVertexDiskCycle(gMesh.GetVertex(edge.OVertexIndex), out issue),
+				"disk cycle validation failed: " + issue);
 
 			Assert.IsTrue(edge.Index >= 0 && edge.Index < edgeCount);
 			Assert.IsTrue(edge.AVertexIndex >= 0 && edge.AVertexIndex < vertexCount);
@@ -204,34 +207,15 @@ public static class Validate
 
 			GMesh.Edge v1NextEdge = default;
 			Assert.DoesNotThrow(() => { v1NextEdge = gMesh.GetEdge(edge.ONextEdgeIndex); });
-			
+
 			// enumerate the disk cycle (check for infinite loops and that our edge is part of the cycle)
 			CheckEdgeCorrectlyLinkedInDiskCycle(gMesh, edge, edge.AVertexIndex);
 			CheckEdgeCorrectlyLinkedInDiskCycle(gMesh, edge, edge.OVertexIndex);
-			
+
 			// check that edge doesn't cycle from one end to the other end
 			Assert.IsTrue(edge.APrevEdgeIndex != edge.OPrevEdgeIndex && edge.APrevEdgeIndex != edge.ONextEdgeIndex);
 			Assert.IsTrue(edge.ANextEdgeIndex != edge.OPrevEdgeIndex && edge.ANextEdgeIndex != edge.ONextEdgeIndex);
 		}
-	}
-
-	private static void CheckEdgeCorrectlyLinkedInDiskCycle(GMesh gMesh, in GMesh.Edge edge, int vertexIndex)
-	{
-		var inEdge = edge;
-		var foundUs = 0;
-		Assert.DoesNotThrow(() =>
-		{
-			gMesh.ForEachEdge(vertexIndex, (e) =>
-			{
-				Assert.IsTrue(e.ContainsVertex(vertexIndex), $"edge in disk cycle does not contain the vertex {vertexIndex}: {e}");
-				
-				if (e.Index == inEdge.GetPrevEdgeIndex(vertexIndex))
-					foundUs++;
-				if (e.Index == inEdge.GetNextEdgeIndex(vertexIndex))
-					foundUs++;
-			});
-		});
-		Assert.IsTrue(foundUs == 2, $"invalid edge in disk cycle of vertex {edge.AVertexIndex}: {edge}");
 	}
 
 	public static void VertexElements(GMesh gMesh)
@@ -306,5 +290,24 @@ public static class Validate
 		Assert.AreEqual(loopCount, mesh.LoopCount, "LoopCount");
 		Assert.AreEqual(edgeCount, mesh.EdgeCount, "EdgeCount");
 		Assert.AreEqual(vertexCount, mesh.VertexCount, "VertexCount");
+	}
+
+	private static void CheckEdgeCorrectlyLinkedInDiskCycle(GMesh gMesh, in GMesh.Edge edge, int vertexIndex)
+	{
+		var inEdge = edge;
+		var foundUs = 0;
+		Assert.DoesNotThrow(() =>
+		{
+			gMesh.ForEachEdge(vertexIndex, e =>
+			{
+				Assert.IsTrue(e.ContainsVertex(vertexIndex), $"edge in disk cycle does not contain the vertex {vertexIndex}: {e}");
+
+				if (e.Index == inEdge.GetPrevEdgeIndex(vertexIndex))
+					foundUs++;
+				if (e.Index == inEdge.GetNextEdgeIndex(vertexIndex))
+					foundUs++;
+			});
+		});
+		Assert.IsTrue(foundUs == 2, $"invalid edge in disk cycle of vertex {edge.AVertexIndex}: {edge}");
 	}
 }

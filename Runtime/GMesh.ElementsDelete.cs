@@ -3,7 +3,7 @@
 
 using UnityEngine;
 
-namespace CodeSmile.GMesh
+namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{

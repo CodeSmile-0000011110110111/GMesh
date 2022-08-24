@@ -1,4 +1,5 @@
-using CodeSmile.GMesh;
+using CodeSmile;
+using CodeSmile.GraphMesh;
 using System;
 using System.Collections;
 using Unity.Mathematics;
@@ -16,8 +17,8 @@ public class GMeshTestBehaviour : MonoBehaviour
 	[SerializeField] private PrimitiveType _primitiveType;
 	[Range(3, 60)] [SerializeField] private int _polygonVertexCount = 3;
 	[Range(0.01f, 1000f)] [SerializeField] private float _polygonScale = 1f;
-	[SerializeField] private PlaneParameters _planeParameters = new();
-	[SerializeField] private CubeParameters _cubeParameters = new();
+	[SerializeField] private GMeshPlane _planeParameters = new();
+	[SerializeField] private GMeshCube _cubeParameters = new();
 
 	[Header("Euler Operators")]
 	[Range(0, 9)] [SerializeField] private int _edgeTesselation;

@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 
-namespace CodeSmile.GMesh
+namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{

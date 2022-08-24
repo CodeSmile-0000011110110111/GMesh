@@ -1,8 +1,8 @@
-using CodeSmile.GMesh;
+using CodeSmile;
+using CodeSmile.GraphMesh;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using Tests.Editor;
 using Unity.Mathematics;
 
 [TestFixture]
