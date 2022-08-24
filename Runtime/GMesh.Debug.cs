@@ -199,11 +199,21 @@ namespace CodeSmile.GMesh
 					if (e.IsValid == false)
 						continue;
 
-					string issue = null;
+					var v0PrevEdge = GetEdge(e.APrevEdgeIndex);
+					var v0NextEdge = GetEdge(e.ANextEdgeIndex);
+					var v1NextEdge = GetEdge(e.ONextEdgeIndex);
+					var v1PrevEdge = GetEdge(e.OPrevEdgeIndex);
+
 					var aVertex = GetVertex(e.AVertexIndex);
 					var oVertex = GetVertex(e.OVertexIndex);
 					var v0Pos = math.transform(t, aVertex.Position * scale);
 					var v1Pos = math.transform(t, oVertex.Position * scale);
+					var edgeCutOff = 0.22f;
+					var edgeDir = (v1Pos - v0Pos) * edgeCutOff;
+					var mainEdgeV0 = v0Pos + edgeDir;
+					var mainEdgeV1 = v1Pos - edgeDir;
+
+					string issue = null;
 					if (highlightErrors)
 					{
 						var position = v0Pos;
@@ -212,8 +222,12 @@ namespace CodeSmile.GMesh
 						{
 							foundIssue = ValidateVertexDiskCycle(oVertex, out issue) == false;
 							if (foundIssue)
-							{
 								position = v1Pos;
+							else
+							{
+								foundIssue = ValidateEdgeRadialLoopCycle(e, out issue) == false;
+								if (foundIssue)
+									position = v0Pos + (v1Pos - v0Pos) * 0.5f;
 							}
 						}
 
@@ -227,15 +241,6 @@ namespace CodeSmile.GMesh
 						}
 					}
 
-					var v0PrevEdge = GetEdge(e.APrevEdgeIndex);
-					var v0NextEdge = GetEdge(e.ANextEdgeIndex);
-					var v1NextEdge = GetEdge(e.ONextEdgeIndex);
-					var v1PrevEdge = GetEdge(e.OPrevEdgeIndex);
-
-					var edgeCutOff = 0.22f;
-					var edgeDir = (v1Pos - v0Pos) * edgeCutOff;
-					var mainEdgeV0 = v0Pos + edgeDir;
-					var mainEdgeV1 = v1Pos - edgeDir;
 					Handles.DrawBezier(mainEdgeV0, mainEdgeV1, mainEdgeV0, mainEdgeV1, lineColor, null, lineThickness);
 
 					var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
