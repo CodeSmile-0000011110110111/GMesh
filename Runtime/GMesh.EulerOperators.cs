@@ -51,20 +51,15 @@ namespace CodeSmile.GMesh
 
 			// prefer the vertex that's pointing to the split edge to remain with split edge
 			GetVerticesPreferBaseEdgeVertex(splitEdge, out var keepVert, out var otherVert);
-			SplitEdgeInternal_CreateEdgeAndVertex(pos, otherVert.Index, out var insertedEdge, out var newVertex);
-			SplitEdgeInternal_TrySetOtherVertexBase(ref otherVert, splitEdge.Index, insertedEdge.Index);
-
+			SplitEdgeInternal_CreateEdgeAndVertex(pos, otherVert.Index, out var insertedEdge, out var newVert);
+			// in case both edge vertices' BaseEdge point to the splitEdge
+			SplitEdgeInternal_UpdateOtherVertexBaseEdgeIfNeeded(ref otherVert, splitEdge.Index, insertedEdge.Index);
 			// replace split edge in disk cycle where inserted edge took its place
 			SplitEdgeInternal_ReplaceEdgeInDiskCycle(otherVert.Index, splitEdge, in insertedEdge);
-			
 			// connect the two edges together at the new vertex
-			insertedEdge.CopyDiskCycleFrom(otherVert.Index, splitEdge);
-			insertedEdge.SetDiskCycleIndices(newVertex.Index, splitEdge.Index);
-			splitEdge.SetOppositeVertexIndex(keepVert.Index, newVertex.Index);
-			splitEdge.SetDiskCycleIndices(newVertex.Index, insertedEdge.Index);
-
+			SplitEdgeInternal_ReconnectEdges(ref splitEdge, ref insertedEdge, newVert.Index, keepVert.Index, otherVert.Index);
 			// Split and insert loops (one or both, depends on whether it is a border edge)
-			SplitEdgeInternal_CreateAndInsertLoops(ref splitEdge, ref insertedEdge, newVertex.Index);
+			SplitEdgeInternal_CreateAndInsertLoops(ref splitEdge, ref insertedEdge, newVert.Index);
 
 			// write edges to graph
 			SetEdge(insertedEdge);
@@ -76,6 +71,15 @@ namespace CodeSmile.GMesh
 #endif
 
 			return insertedEdge.Index;
+		}
+
+		private void SplitEdgeInternal_ReconnectEdges(ref Edge splitEdge, ref Edge insertedEdge, int newVertIndex, int keepVertIndex,
+			int otherVertIndex)
+		{
+			insertedEdge.CopyDiskCycleFrom(otherVertIndex, splitEdge);
+			insertedEdge.SetDiskCycleIndices(newVertIndex, splitEdge.Index);
+			splitEdge.SetOppositeVertexIndex(keepVertIndex, newVertIndex);
+			splitEdge.SetDiskCycleIndices(newVertIndex, insertedEdge.Index);
 		}
 
 		private void SplitEdgeInternal_ReplaceEdgeInDiskCycle(int vertexIndex, in Edge splitEdge, in Edge insertedEdge)
@@ -98,8 +102,8 @@ namespace CodeSmile.GMesh
 				SetEdge(otherNextEdge);
 			}
 		}
-		
-		private void SplitEdgeInternal_TrySetOtherVertexBase(ref Vertex otherVert, int splitEdgeIndex, int insertedEdgeIndex)
+
+		private void SplitEdgeInternal_UpdateOtherVertexBaseEdgeIfNeeded(ref Vertex otherVert, int splitEdgeIndex, int insertedEdgeIndex)
 		{
 			// if both vertices of splitEdge had splitEdge as their base edge, set the other vertex edge to use inserted edge as base
 			// this is done by preference: baseEdgeIndex should ideally point to a unique edge (but doesn't have to)
@@ -160,58 +164,11 @@ namespace CodeSmile.GMesh
 			SetVertex(newVertex);
 		}
 
-		private void GetVerticesPreferBaseEdgeVertex(in Edge edge, out Vertex baseVertex, out Vertex otherVertex)
-		{
-			var vertexA = GetVertex(edge.AVertexIndex);
-			var vertexO = GetVertex(edge.OVertexIndex);
-			baseVertex = edge.Index == vertexA.BaseEdgeIndex ? vertexA : vertexO;
-			otherVertex = baseVertex.Index == vertexO.Index ? vertexA : vertexO;
-		}
 
-		private Loop CreateAndInsertLoop(ref Loop existingLoop, ref Edge newLoopEdge, int loopVertexIndex)
-		{
-			// Create and insert the new loop on the same face
-			var newLoopIndex = LoopCount;
-			newLoopEdge.BaseLoopIndex = newLoopIndex;
 
-			var newLoop = Loop.Create(existingLoop.FaceIndex, newLoopEdge.Index, loopVertexIndex,
-				newLoopIndex, newLoopIndex, existingLoop.Index, existingLoop.NextLoopIndex);
-			var newLoopIndexAfterAdd = AddLoop(ref newLoop);
-			if (newLoopIndexAfterAdd != newLoopIndex)
-				throw new OperationCanceledException("index not as expected");
 
-			InsertLoopAfter(ref existingLoop, newLoopIndex);
-			IncrementFaceElementCount(existingLoop.FaceIndex);
 
-			// verification that loop's edge contains loop's vertex:
-			if (newLoopEdge.ContainsVertex(newLoop.StartVertexIndex) == false)
-				throw new OperationCanceledException($"new: edge does not contain loop vertex:\n{newLoop}\n{newLoopEdge}");
 
-			if (GetEdge(existingLoop.EdgeIndex).ContainsVertex(existingLoop.StartVertexIndex) == false)
-			{
-				throw new OperationCanceledException(
-					$"existing: edge does not contain loop vertex:\n{existingLoop}\n{GetEdge(existingLoop.EdgeIndex)}");
-			}
-
-			return newLoop;
-		}
-
-		private void InsertLoopAfter(ref Loop existingLoop, int newLoopIndex)
-		{
-			var nextLoopIndex = existingLoop.NextLoopIndex;
-			existingLoop.NextLoopIndex = newLoopIndex;
-
-			var nextLoop = GetLoop(nextLoopIndex);
-			nextLoop.PrevLoopIndex = newLoopIndex;
-			SetLoop(nextLoop);
-		}
-
-		private void IncrementFaceElementCount(int faceIndex)
-		{
-			var face = GetFace(faceIndex);
-			face.ElementCount++;
-			SetFace(face);
-		}
 
 		/*
 		 * JOIN EDGE KILL VERT:

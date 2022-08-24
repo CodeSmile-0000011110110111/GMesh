@@ -103,6 +103,8 @@ public static class Validate
 			Assert.DoesNotThrow(() => { edge = gMesh.GetEdge(loop.EdgeIndex); });
 			Assert.IsTrue(edge.IsValid);
 
+			Assert.IsTrue(gMesh.ValidateEdgeRadialLoopCycle(edge, out var issue2), "radial loop validation failed: " + issue2);
+
 			// can this edge be found when enumerating radial loop cycle?
 			found = false;
 			Assert.DoesNotThrow(() => { gMesh.ForEachRadialLoop(edge, l => found = l.Index == loop.Index); });
@@ -138,8 +140,6 @@ public static class Validate
 				Assert.IsTrue(loop.NextRadialLoopIndex >= 0 && loop.NextRadialLoopIndex < loopCount);
 
 				// for the time being the assumption is that radial loops either both point to itself, or to the opposite loop
-				// since in game engines we really should not have more than two faces connected to the same edge, sorry
-				// (please correct me if I'm wrong and there is an actual requirement for such a thing)
 				Assert.IsTrue(loop.PrevRadialLoopIndex == loop.NextRadialLoopIndex);
 
 				// no other radial loops? both prev/next must point to the loop itself

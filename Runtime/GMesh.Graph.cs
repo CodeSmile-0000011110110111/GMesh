@@ -7,20 +7,30 @@ namespace CodeSmile.GMesh
 {
 	public sealed partial class GMesh
 	{
-		private (int, int) GetBaseEdgeDiskCycleIndices(int vertexIndex)
+		private Loop CreateAndInsertLoop(ref Loop existingLoop, ref Edge newLoopEdge, int loopVertexIndex)
 		{
-			// get prev/next edge from vertex base edge
-			var vertex = GetVertex(vertexIndex);
-			if (vertex.IsValid == false)
-				throw new InvalidOperationException($"vertex {vertexIndex} not valid");
+			// Create and insert the new loop on the same face
+			var newLoopIndex = LoopCount;
+			newLoopEdge.BaseLoopIndex = newLoopIndex;
 
-			var baseEdge = GetEdge(vertex.BaseEdgeIndex);
-			if (baseEdge.IsValid == false)
-				throw new InvalidOperationException($"baseEdge of vertex {vertexIndex} not valid");
+			var newLoop = Loop.Create(existingLoop.FaceIndex, newLoopEdge.Index, loopVertexIndex,
+				newLoopIndex, newLoopIndex, existingLoop.Index, existingLoop.NextLoopIndex);
+			AddLoop(ref newLoop);
 
-			return baseEdge.GetDiskCycleIndices(vertexIndex);
+			InsertLoopAfter(ref existingLoop, newLoopIndex);
+			IncrementFaceElementCount(existingLoop.FaceIndex);
+
+#if GMESH_VALIDATION
+			// verification that loop's edge contains loop's vertex:
+			if (newLoopEdge.ContainsVertex(newLoop.StartVertexIndex) == false)
+				throw new Exception($"new: edge does not contain loop vertex:\n{newLoop}\n{newLoopEdge}");
+			if (GetEdge(existingLoop.EdgeIndex).ContainsVertex(existingLoop.StartVertexIndex) == false)
+				throw new Exception($"existing: edge does not contain loop vertex:\n{existingLoop}\n{GetEdge(existingLoop.EdgeIndex)}");
+#endif
+
+			return newLoop;
 		}
-
+		
 		internal void InsertEdgeInDiskCycle(int vertexIndex, ref Edge insertEdge)
 		{
 			var vertex = GetVertex(vertexIndex);

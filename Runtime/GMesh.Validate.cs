@@ -237,6 +237,64 @@ namespace CodeSmile.GMesh
 			return true;
 		}
 
+		public bool ValidateEdgeRadialLoopCycle(in Edge edge)
+		{
+			string issue = null;
+			return ValidateEdgeRadialLoopCycle(edge, out issue);
+		}
+
+		public bool ValidateEdgeRadialLoopCycle(in Edge edge, out string issue)
+		{
+			var baseLoop = GetLoop(edge.BaseLoopIndex);
+			if (baseLoop.IsValid == false)
+			{
+				issue = $"Invalidated => {baseLoop}";
+				return false;
+			}
+			if (baseLoop.EdgeIndex != edge.Index)
+			{
+				issue = $"base loop does not point back to edge:\n{edge}\n{baseLoop}";
+				return false;
+			}
+			if (baseLoop.PrevRadialLoopIndex < 0 || baseLoop.PrevRadialLoopIndex >= LoopCount ||
+			    baseLoop.NextRadialLoopIndex < 0 || baseLoop.NextRadialLoopIndex >= LoopCount)
+			{
+				issue = $"radial loop index out of bounds:\n{baseLoop}";
+				return false;
+			}
+			if (baseLoop.PrevRadialLoopIndex == baseLoop.Index && baseLoop.NextRadialLoopIndex != baseLoop.Index ||
+			    baseLoop.NextRadialLoopIndex == baseLoop.Index && baseLoop.PrevRadialLoopIndex != baseLoop.Index)
+			{
+				issue = $"loop radial cannot both point to itself and another loop:\n{baseLoop}";
+				return false;
+			}
+			if (baseLoop.PrevRadialLoopIndex != baseLoop.NextRadialLoopIndex)
+			{
+				issue = $"ASSUMPTION: only 1 or 2 loops in radial cycle expected:\n{baseLoop}";
+				return false;
+			}
+
+			// traverse both directions
+			var maxIterations = 1000;
+			var prevLoop = baseLoop;
+			var nextLoop = baseLoop;
+			do
+			{
+				prevLoop = GetLoop(prevLoop.NextRadialLoopIndex);
+				nextLoop = GetLoop(nextLoop.NextRadialLoopIndex);
+				maxIterations--;
+			} while (nextLoop.Index != baseLoop.Index && prevLoop.Index != baseLoop.Index || maxIterations == 0);
+
+			if (maxIterations == 0)
+			{
+				issue = $"radial cycle not closed or not symmetric:\n{baseLoop}";
+				return false;
+			}
+
+			issue = NoIssues;
+			return true;
+		}
+
 		public bool ValidateVertexDiskCycle(in Vertex vertex)
 		{
 			string issue = null;
