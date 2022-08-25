@@ -3,7 +3,11 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Unity.Burst;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace CodeSmile.GraphMesh
@@ -115,17 +119,17 @@ namespace CodeSmile.GraphMesh
 		/// <param name="vertexIndexA"></param>
 		/// <param name="vertexIndexO"></param>
 		/// <returns>index of the new edge</returns>
-		public int CreateEdge(int vertexIndexA, int vertexIndexO)
+		public (int, JobHandle) CreateEdge(int vertexIndexA, int vertexIndexO)
 		{
 			// avoid edge duplication: if there is already an edge between edge[0] and edge[1] vertices, return existing edge instead
 			var existingEdgeIndex = FindEdgeIndex(vertexIndexA, vertexIndexO);
 			if (existingEdgeIndex != UnsetIndex)
-				return existingEdgeIndex;
+				return (existingEdgeIndex, default);
 
 			var edge = Edge.Create(vertexIndexA, vertexIndexO);
 			var edgeIndex = AddEdge(ref edge);
-			CreateEdgeInternal_UpdateEdgeCycle(ref edge, vertexIndexA, vertexIndexO);
-			return edgeIndex;
+			var jobHandle = CreateEdgeInternal_UpdateEdgeCycle(ref edge, vertexIndexA, vertexIndexO);
+			return (edgeIndex, jobHandle);
 		}
 
 		/// <summary>
@@ -142,11 +146,16 @@ namespace CodeSmile.GraphMesh
 			edgeIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
 			var loopCount = vCount - 1;
+			JobHandle jobHandle;
 			for (var i = 0; i < loopCount; i++)
-				edgeIndices[i] = CreateEdge(vertexIndices[i], vertexIndices[i + 1]);
+			{
+				(edgeIndices[i], jobHandle) = CreateEdge(vertexIndices[i], vertexIndices[i + 1]);
+				jobHandle.Complete();
+			}
 
 			// last one closes the loop
-			edgeIndices[loopCount] = CreateEdge(vertexIndices[loopCount], vertexIndices[0]);
+			(edgeIndices[loopCount], jobHandle) = CreateEdge(vertexIndices[loopCount], vertexIndices[0]);
+			jobHandle.Complete();
 		}
 
 		/// <summary>
@@ -191,70 +200,10 @@ namespace CodeSmile.GraphMesh
 				CreateVertex(positions[i]);
 		}
 
-		private void CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
+		private JobHandle CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
 		{
-			var edgeIndex = edge.Index;
-
-			// Vertex 0
-			{
-				var v0 = GetVertex(v0Index);
-				if (v0.BaseEdgeIndex == UnsetIndex)
-				{
-					v0.BaseEdgeIndex = edge.APrevEdgeIndex = edge.ANextEdgeIndex = edgeIndex;
-					SetVertex(v0);
-				}
-				else
-				{
-					var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
-					edge.APrevEdgeIndex = v0.BaseEdgeIndex;
-					edge.ANextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
-
-					var v0PrevEdge = GetEdge(edge.APrevEdgeIndex);
-					v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
-					SetEdge(v0PrevEdge);
-
-					var v0NextEdge = GetEdge(edge.ANextEdgeIndex);
-					v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
-					SetEdge(v0NextEdge);
-
-					// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
-					// This occurs when v0 and v1 were the first vertices to be connected with an edge.
-					var prevEdgeVertex0 = GetVertex(v0BaseEdge.AVertexIndex);
-					if (prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex)
-					{
-						v0.BaseEdgeIndex = edgeIndex;
-						SetVertex(v0);
-					}
-				}
-			}
-
-			// Vertex 1
-			{
-				var v1 = GetVertex(v1Index);
-				if (v1.BaseEdgeIndex == UnsetIndex)
-				{
-					// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
-					// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
-					v1.BaseEdgeIndex = edge.OPrevEdgeIndex = edge.ONextEdgeIndex = edgeIndex;
-					SetVertex(v1);
-				}
-				else
-				{
-					var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
-					edge.OPrevEdgeIndex = v1.BaseEdgeIndex;
-					edge.ONextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
-
-					var v1PrevEdge = GetEdge(edge.OPrevEdgeIndex);
-					v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
-					SetEdge(v1PrevEdge);
-
-					var v1NextEdge = GetEdge(edge.ONextEdgeIndex);
-					v1NextEdge.SetPrevEdgeIndex(v1Index, edgeIndex);
-					SetEdge(v1NextEdge);
-				}
-			}
-
-			SetEdge(edge);
+			var job = new UpdateEdgeCycleJob { vertices = _vertices, edges = _edges, edge = edge, v0Index = v0Index, v1Index = v1Index };
+			return job.Schedule();
 		}
 
 		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
@@ -337,6 +286,87 @@ namespace CodeSmile.GraphMesh
 			}
 
 			return (prevLoopIndex, nextLoopIndex);
+		}
+
+		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+		private struct UpdateEdgeCycleJob : IJob
+		{
+			public NativeList<Vertex> vertices;
+			public NativeList<Edge> edges;
+			public Edge edge;
+			public int v0Index;
+			public int v1Index;
+
+			private Vertex GetVertex(int index) => vertices[index];
+			private void SetVertex(in Vertex vertex) => vertices[vertex.Index] = vertex;
+			private Edge GetEdge(int index) => edges[index];
+			private void SetEdge(in Edge edge) => edges[edge.Index] = edge;
+
+			public void Execute()
+			{
+				var edgeIndex = edge.Index;
+
+				// Vertex 0
+				{
+					var v0 = GetVertex(v0Index);
+					if (Hint.Unlikely(v0.BaseEdgeIndex == UnsetIndex))
+					{
+						v0.BaseEdgeIndex = edge.APrevEdgeIndex = edge.ANextEdgeIndex = edgeIndex;
+						SetVertex(v0);
+					}
+					else
+					{
+						var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
+						edge.APrevEdgeIndex = v0.BaseEdgeIndex;
+						edge.ANextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
+
+						var v0PrevEdge = GetEdge(edge.APrevEdgeIndex);
+						v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
+						SetEdge(v0PrevEdge);
+
+						var v0NextEdge = GetEdge(edge.ANextEdgeIndex);
+						v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
+						SetEdge(v0NextEdge);
+
+						// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
+						// This occurs when v0 and v1 were the first vertices to be connected with an edge.
+						var prevEdgeVertex0 = GetVertex(v0BaseEdge.AVertexIndex);
+						if (Hint.Unlikely(prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex))
+						{
+							v0.BaseEdgeIndex = edgeIndex;
+							SetVertex(v0);
+						}
+					}
+				}
+
+				// Vertex 1
+				{
+					var v1 = GetVertex(v1Index);
+					if (Hint.Unlikely(v1.BaseEdgeIndex == UnsetIndex))
+					{
+						// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
+						// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
+						v1.BaseEdgeIndex = edge.OPrevEdgeIndex = edge.ONextEdgeIndex = edgeIndex;
+						SetVertex(v1);
+					}
+					else
+					{
+						var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
+						edge.OPrevEdgeIndex = v1.BaseEdgeIndex;
+						edge.ONextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
+
+						var v1PrevEdge = GetEdge(edge.OPrevEdgeIndex);
+						v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
+						SetEdge(v1PrevEdge);
+
+						var v1NextEdge = GetEdge(edge.ONextEdgeIndex);
+						v1NextEdge.SetPrevEdgeIndex(v1Index, edgeIndex);
+						SetEdge(v1NextEdge);
+					}
+				}
+
+				SetEdge(edge);
+			}
 		}
 	}
 }

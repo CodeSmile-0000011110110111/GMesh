@@ -14,9 +14,7 @@ namespace CodeSmile.GraphMesh
 		/// <summary>
 		/// A vertex is primarily a coordinate in space.
 		/// </summary>
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential)]
-		[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
+		[Serializable] [BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		public struct Vertex
 		{
 			/// <summary>
@@ -72,9 +70,7 @@ namespace CodeSmile.GraphMesh
 		/// An edge has no orientation, the two vertices can be at either end.
 		/// Use GetOtherVertexIndex(int vertexIndex) to get from the given vertex of the edge to the other vertex. 
 		/// </summary>
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential)]
-		[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
+		[Serializable] [BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		public struct Edge
 		{
 			/// <summary>
@@ -266,9 +262,7 @@ namespace CodeSmile.GraphMesh
 		/// A loop represents a directed, clockwise winding order of vertices/edges for a face.
 		/// Loops are closely tied to a face, a loop cannot exist without a face that owns the loop.
 		/// </summary>
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential)]
-		[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
+		[Serializable] [BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		public struct Loop
 		{
 			/// <summary>
@@ -345,9 +339,7 @@ namespace CodeSmile.GraphMesh
 		/// vertices do not all lie on the same plane. These are things that may not be supported during conversion
 		/// of the graph to a Unity Mesh, thus the GMesh consumer must ensure that faces adhere to necessary specifications.
 		/// </summary>
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential)]
-		[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
+		[Serializable] [BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		public struct Face
 		{
 			/// <summary>
