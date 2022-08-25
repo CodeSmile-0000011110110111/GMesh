@@ -1,6 +1,7 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -15,11 +16,15 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="inputMeshes">one or more GMesh instances to combine</param>
 		/// <param name="disposeInputMeshes">If true, Dispose() is called on each input mesh before returning to caller.</param>
-		public static GMesh Combine(IEnumerable<GMesh> inputMeshes, bool disposeInputMeshes = false)
+		public static GMesh Combine(IList<GMesh> inputMeshes, bool disposeInputMeshes = false)
 		{
+			if (inputMeshes == null)
+				throw new ArgumentNullException(nameof(inputMeshes));
+
 			var totalFaceCount = 0;
-			foreach (var mesh in inputMeshes)
-				totalFaceCount += mesh.FaceCount;
+			var meshCount = inputMeshes.Count;
+			for (var i = 0; i < meshCount; i++)
+				totalFaceCount += inputMeshes[i].FaceCount;
 
 			var allFaceGridPositions = new int3[totalFaceCount][];
 			var allFaceGridPosIndex = 0;
@@ -30,10 +35,13 @@ namespace CodeSmile.GraphMesh
 			var combinedMesh = new GMesh();
 
 			// get all vertices from all faces, use vertex GridPosition to merge close ones
-			foreach (var inputMesh in inputMeshes)
+			for (var meshIndex = 0; meshIndex < meshCount; meshIndex++)
 			{
-				foreach (var inputFace in inputMesh.Faces)
+				var inputMesh = inputMeshes[meshIndex];
+				var meshFaceCount = inputMesh.Faces.Length;
+				for (var faceIndex = 0; faceIndex < meshFaceCount; faceIndex++)
 				{
+					var inputFace = inputMesh.Faces[faceIndex];
 					if (inputFace.IsValid == false)
 						continue;
 
@@ -67,15 +75,18 @@ namespace CodeSmile.GraphMesh
 				Debug.Log($"[{gridPos.Value}] = {gridPos.Key} => Vertex: {combinedMesh.GetVertex(gridPos.Value)}");
 			*/
 
-			foreach (var faceVertices in allFaceGridPositions)
+			var gridPosCount = allFaceGridPositions.Length;
+			for (var gridIndex = 0; gridIndex < gridPosCount; gridIndex++)
 			{
+				var faceVertices = allFaceGridPositions[gridIndex];
 				// get the face's vertex indices based on their grid positions
-				var vertexIndices = new int[faceVertices.Length];
+				var vertexIndices = new NativeArray<int>(faceVertices.Length, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 				for (var i = 0; i < faceVertices.Length; i++)
 					vertexIndices[i] = knownGridPositions[faceVertices[i]];
 
 				// now we can create the new face
 				combinedMesh.CreateFace(vertexIndices);
+				vertexIndices.Dispose();
 			}
 
 			knownGridPositions.Dispose();

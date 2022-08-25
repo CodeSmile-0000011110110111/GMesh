@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace CodeSmile.GraphMesh
@@ -84,6 +85,11 @@ namespace CodeSmile.GraphMesh
 		/// Creates a GMesh with a single face using the supplied triangles. Same as calling CreateFace(vertexPositions) on an empty GMesh.
 		/// </summary>
 		/// <param name="vertexPositions"></param>
-		public GMesh(IEnumerable<float3> vertexPositions) => CreateFace(vertexPositions);
+		public GMesh(in NativeArray<float3> vertexPositions, bool disposeInputArray = false)
+		{
+			CreateFace(vertexPositions);
+			if (disposeInputArray)
+				vertexPositions.Dispose();
+		}
 	}
 }

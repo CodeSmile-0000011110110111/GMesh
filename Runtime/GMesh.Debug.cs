@@ -29,7 +29,7 @@ namespace CodeSmile.GraphMesh
 		}
 
 		public override string ToString() =>
-			$"{GetType().Name} with {FaceCount} faces, {EdgeCount} edges, {VertexCount} vertices, Pivot: {Pivot}, Centroid: {CalculateCentroid()}";
+			$"{GetType().Name} with {FaceCount} faces, {EdgeCount} edges, {VertexCount} vertices, Pivot: {Pivot}";
 
 		/// <summary>
 		/// Dump all elements for debugging purposes.

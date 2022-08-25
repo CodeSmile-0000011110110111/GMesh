@@ -62,25 +62,6 @@ public class EulerOperatorTests
 		}
 	}
 
-	[Test] public void SplitAllEdges_1Hexagon()
-	{
-		using (var gMesh = new GMesh())
-		{
-			Assert.DoesNotThrow(() => { gMesh.CreateFace(Constants.HexagonVertices); });
-			Validate.AllElementsAndRelations(gMesh);
-
-			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = gMesh.EdgeCount;
-			for (var i = 0; i < edgeCount; i++)
-				gMesh.SplitEdgeAndCreateVertex(i);
-
-			gMesh.DebugLogAllElements();
-			Assert.AreEqual(1, gMesh.FaceCount);
-			Assert.AreEqual(12, gMesh.GetFace(0).ElementCount);
-			Validate.AllElementsAndRelations(gMesh);
-		}
-	}
-
 	[Test] public void SplitAllEdges_4x4Plane()
 	{
 		using (var gMesh = GMesh.Plane(new GMeshPlane(new int2(4))))

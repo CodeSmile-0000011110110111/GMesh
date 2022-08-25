@@ -22,7 +22,7 @@ namespace CodeSmile.GraphMesh
 			
 		}
 		*/
-			
+
 		/*
 		/// <summary>
 		/// Returns index of edge that connects the two vertices.
@@ -66,7 +66,7 @@ namespace CodeSmile.GraphMesh
 		/// <param name="edge">Edge to check for, will be assigned to existing one.</param>
 		/// <returns>True if edge exists between v0 and v1. False if there is no edge connecting the two vertices.</returns>
 		public int FindEdgeIndex(in Edge edge) => FindEdgeIndex(edge.AVertexIndex, edge.OVertexIndex);
-		
+
 		/// <summary>
 		/// Tries to find an existing edge connecting the two vertices (via their indices).
 		/// </summary>
@@ -75,35 +75,29 @@ namespace CodeSmile.GraphMesh
 		/// <returns>True if edge exists between v0 and v1. False if there is no edge connecting the two vertices.</returns>
 		public int FindEdgeIndex(int v0Index, int v1Index)
 		{
+			if (v0Index == UnsetIndex || v1Index == UnsetIndex)
+				return UnsetIndex;
+
+			var edgeIndex = GetVertex(v0Index).BaseEdgeIndex;
+			if (edgeIndex == UnsetIndex)
+				return UnsetIndex;
+
 			// check all edges in cycle, return this edge's index if it points to v1
-			var existingEdgeIndex = UnsetIndex;
-			ForEachEdge(v0Index, e =>
+			var edge = GetEdge(edgeIndex);
+			var maxIterations = 10000;
+			do
 			{
-				if (e.IsConnectingVertices(v0Index, v1Index))
-				{
-					existingEdgeIndex = e.Index;
-					return true;
-				}
+				if (edge.ContainsVertex(v1Index))
+					return edge.Index;
 
-				return false;
-			});
+				edge = GetEdge(edge.GetNextEdgeIndex(v0Index));
 
-			if (existingEdgeIndex != UnsetIndex)
-				return existingEdgeIndex;
+				maxIterations--;
+				if (maxIterations == 0)
+					throw new Exception($"{nameof(ForEachEdgeInternal)}: possible infinite loop due to malformed mesh graph around {edge}");
+			} while (edge.Index != edgeIndex);
 
-			ForEachEdge(v1Index, e =>
-			{
-				if (e.IsConnectingVertices(v0Index, v1Index))
-				{
-					existingEdgeIndex = e.Index;
-					return true;
-				}
-
-				return false;
-			});
-
-			return existingEdgeIndex;
+			return UnsetIndex;
 		}
-
 	}
 }

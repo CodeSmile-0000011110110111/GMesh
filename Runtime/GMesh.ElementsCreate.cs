@@ -2,8 +2,8 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.CompilerServices;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace CodeSmile.GraphMesh
@@ -19,15 +19,20 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="vertexIndices">minimum of 3 vertex indices in CLOCKWISE winding order</param>
 		/// <returns>the index of the new face</returns>
-		public int CreateFace(IEnumerable<int> vertexIndices)
+		public int CreateFace(in NativeArray<int> vertexIndices)
 		{
+#if GMESH_VALIDATION
 			EnsureValidVertexCollection(vertexIndices);
-			var vertexCount = vertexIndices.Count();
-			var edgeIndices = CreateEdges(vertexIndices);
+#endif
+
+			CreateEdges(vertexIndices, out var edgeIndices);
+
+			var vertexCount = vertexIndices.Length;
 			var face = Face.Create(vertexCount);
 			var faceIndex = AddFace(ref face);
-			CreateLoopsInternal(faceIndex, edgeIndices, vertexIndices);
 
+			CreateFaceInternal_CreateLoops(faceIndex, vertexIndices, edgeIndices);
+			edgeIndices.Dispose();
 			return faceIndex;
 		}
 
@@ -39,20 +44,22 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="vertexPositions">3 or more vertex positions in CLOCKWISE winding order</param>
 		/// <returns>the index of the new face</returns>
-		public int CreateFace(IEnumerable<float3> vertexPositions)
+		public int CreateFace(in NativeArray<float3> vertexPositions)
 		{
+#if GMESH_VALIDATION
 			EnsureValidVertexCollection(vertexPositions);
-			return CreateFace(CreateVertices(vertexPositions));
+#endif
+
+			CreateVertices(vertexPositions, out var vertexIndices);
+			var faceIndex = CreateFace(vertexIndices);
+			vertexIndices.Dispose();
+			return faceIndex;
 		}
 
-		private void EnsureValidVertexCollection<T>(IEnumerable<T> vertices)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void EnsureValidVertexCollection<T>(in NativeArray<T> vertices) where T : struct
 		{
-			if (vertices == null)
-				throw new ArgumentNullException(nameof(vertices));
-
-			var vertexCount = vertices.Count();
-			if (vertexCount == 0)
-				throw new ArgumentException("no point in creating a face with no points");
+			var vertexCount = vertices.Length;
 			if (vertexCount < 3)
 				throw new ArgumentException($"face with only {vertexCount} vertices is technically possible but reasonably nonsensical");
 		}
@@ -129,30 +136,17 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="vertexIndices"></param>
 		/// <returns>indices of new edges</returns>
-		public int[] CreateEdges(IEnumerable<int> vertexIndices)
+		public void CreateEdges(in NativeArray<int> vertexIndices, out NativeArray<int> edgeIndices)
 		{
-			var vCount = vertexIndices.Count();
-			var edgeIndices = new int[vCount];
-			var i = 0;
-			var firstIndex = UnsetIndex;
-			var prevIndex = UnsetIndex;
-			foreach (var vertexIndex in vertexIndices)
-			{
-				// skip the first
-				if (firstIndex == UnsetIndex)
-				{
-					firstIndex = prevIndex = vertexIndex;
-					continue;
-				}
+			var vCount = vertexIndices.Length;
+			edgeIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
-				edgeIndices[i++] = CreateEdge(prevIndex, vertexIndex);
-				prevIndex = vertexIndex;
-			}
+			var loopCount = vCount - 1;
+			for (var i = 0; i < loopCount; i++)
+				edgeIndices[i] = CreateEdge(vertexIndices[i], vertexIndices[i + 1]);
 
-			// close the loop
-			edgeIndices[i++] = CreateEdge(prevIndex, firstIndex);
-
-			return edgeIndices;
+			// last one closes the loop
+			edgeIndices[loopCount] = CreateEdge(vertexIndices[loopCount], vertexIndices[0]);
 		}
 
 		/// <summary>
@@ -170,24 +164,31 @@ namespace CodeSmile.GraphMesh
 		}
 
 		/// <summary>
-		/// Creates several new vertices at once.
-		/// 
-		/// Note: This is a low-level operation. Prefer to use Euler operators or CreateFace/DeleteFace methods.
+		/// Creates several new vertices at once and returns the indices.
 		/// Note: It is up to the caller to set BaseEdgeIndex of the new vertices.
 		/// </summary>
 		/// <param name="positions"></param>
-		/// <returns>indices of new vertices</returns>
-		public int[] CreateVertices(IEnumerable<float3> positions)
+		/// <param name="vertexIndices">list of vertex indices - caller is responsible for Dispose()</param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void CreateVertices(in NativeArray<float3> positions, out NativeArray<int> vertexIndices)
 		{
-			if (positions == null)
-				throw new ArgumentNullException(nameof(positions));
+			var vCount = positions.Length;
+			vertexIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			for (var i = 0; i < vCount; i++)
+				vertexIndices[i] = CreateVertex(positions[i]);
+		}
 
-			var i = 0;
-			var vertIndices = new int[positions.Count()];
-			foreach (var position in positions)
-				vertIndices[i++] = CreateVertex(position);
-
-			return vertIndices;
+		/// <summary>
+		/// Creates several new vertices at once but does not return the indices.
+		/// Note: It is up to the caller to set BaseEdgeIndex of the new vertices.
+		/// </summary>
+		/// <param name="positions"></param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void CreateVertices(in NativeArray<float3> positions)
+		{
+			var vCount = positions.Length;
+			for (var i = 0; i < vCount; i++)
+				CreateVertex(positions[i]);
 		}
 
 		private void CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
@@ -256,24 +257,21 @@ namespace CodeSmile.GraphMesh
 			SetEdge(edge);
 		}
 
-		private int CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
+		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
 		{
 			var newLoopIndex = LoopCount;
 			var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
 			var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
 			var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
-			return AddLoop(ref loop);
+			AddLoop(ref loop);
 		}
 
-		private void CreateLoopsInternal(int faceIndex, int[] edgeIndices, IEnumerable<int> vertexIndices)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void CreateFaceInternal_CreateLoops(int faceIndex, in NativeArray<int> vertexIndices, in NativeArray<int> edgeIndices)
 		{
-			var edgeCount = edgeIndices.Length;
-			var i = 0;
-			foreach (var vertexIndex in vertexIndices)
-			{
-				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndex);
-				i++;
-			}
+			var vCount = vertexIndices.Length;
+			for (var i = 0; i < vCount; i++)
+				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndices[i]);
 		}
 
 		private (int, int) CreateLoopInternal_UpdateRadialLoopCycle(int newLoopIndex, int edgeIndex)

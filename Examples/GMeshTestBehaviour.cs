@@ -3,10 +3,11 @@ using CodeSmile.GraphMesh;
 using System;
 using System.Collections;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
 
-[ExecuteInEditMode]
+//[ExecuteInEditMode]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class GMeshTestBehaviour : MonoBehaviour
 {
@@ -135,6 +136,19 @@ public class GMeshTestBehaviour : MonoBehaviour
 		}
 
 		_centroidMarker.localPosition = _gMesh.CalculateCentroid();
+	}
+
+	private static ProfilerMarker marker = new ProfilerMarker("GMesh update test");
+	private void Update()
+	{
+		marker.Begin();
+		using (var gMesh = GMesh.Cube(new GMeshCube(8, 2)))
+		{
+			_meshFilter.sharedMesh = gMesh.ToMesh();
+		}
+		marker.End();
+		
+		//Debug.Log("update");
 	}
 
 	private GMesh CreatePrimitive() => _primitiveType switch

@@ -2,7 +2,7 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
-using Unity.Mathematics;
+using Unity.Collections;
 using static Unity.Mathematics.math;
 using float3 = Unity.Mathematics.float3;
 
@@ -16,21 +16,35 @@ namespace CodeSmile.GraphMesh
 		/// <param name="scale"></param>
 		/// <returns></returns>
 		public static GMesh Triangle(float scale = DefaultScale) => Triangle(float3.zero, scale);
-		
+
 		/// <summary>
 		/// A right triangle with lying flat, facing up (positive Y), pivot depends on translation.
 		/// </summary>
 		/// <param name="translation"></param>
 		/// <param name="scale"></param>
 		/// <returns></returns>
-		public static GMesh Triangle(float3 translation, float scale = DefaultScale) => new(new[] { translation*scale, (forward() + translation) * scale, (right()+translation) * scale });
+		public static GMesh Triangle(float3 translation, float scale = DefaultScale)
+		{
+			var vertices = new NativeArray<float3>(3, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+			vertices[0] = translation * scale;
+			vertices[1] = (forward() + translation) * scale;
+			vertices[2] = (right() + translation) * scale;
+			return new GMesh(vertices, true);
+		}
 
 		/// <summary>
 		/// A quad with four vertices with pivot (0,0,0) in the center of the four vertices, lying flat, facing up (+y), axis-aligned (XZ).
 		/// </summary>
 		/// <returns></returns>
-		public static GMesh Quad(float scale = DefaultScale) => new(new[]
-			{ float3(-.5f, 0f, -.5f) * scale, float3(-.5f, 0f, .5f) * scale, float3(.5f, 0f, .5f) * scale, float3(.5f, 0f, -.5f) * scale });
+		public static GMesh Quad(float scale = DefaultScale)
+		{
+			var vertices = new NativeArray<float3>(4, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+			vertices[0] = float3(-.5f, 0f, -.5f) * scale;
+			vertices[1] = float3(-.5f, 0f, .5f) * scale;
+			vertices[2] = float3(.5f, 0f, .5f) * scale;
+			vertices[3] = float3(.5f, 0f, -.5f) * scale ;
+			return new GMesh(vertices, true);
+		}
 
 		/// <summary>
 		/// A "diamond" is a polygon with 4 vertices (quad) which is rotated by 45°, ie its pointy edges align with XZ axis.
@@ -79,10 +93,10 @@ namespace CodeSmile.GraphMesh
 
 			var subdivisions = int2(parameters.VertexCountX - 1, parameters.VertexCountY - 1);
 			var vertexCount = parameters.VertexCountX * parameters.VertexCountY;
-			var vertices = new float3[vertexCount];
+			var vertices = new NativeArray<float3>(vertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
 			// create vertices
-			var scale = float3((float2)parameters.Scale, DefaultScale);
+			var scale = float3(parameters.Scale, DefaultScale);
 			var centerOffset = float3(.5f, .5f, 0f) * scale;
 			var step = 1f / float3(subdivisions, 1f) * scale;
 			var vIndex = 0;
@@ -92,8 +106,10 @@ namespace CodeSmile.GraphMesh
 
 			var gMesh = new GMesh();
 			gMesh.CreateVertices(vertices);
+			vertices.Dispose();
 
 			// create quad faces
+			var faceVertIndices = new NativeArray<int>(4, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 			for (var y = 0; y < subdivisions.y; y++)
 			{
 				for (var x = 0; x < subdivisions.x; x++)
@@ -117,9 +133,15 @@ namespace CodeSmile.GraphMesh
 					//var uv01 = new float4(v0.x, v0.y, v1.x, v1.y);
 					//var uv23 = new float4(v2.x, v2.y, v3.x, v3.y);
 
-					gMesh.CreateFace(new[] { vi0, vi1, vi2, vi3 });
+					faceVertIndices[0] = vi0;
+					faceVertIndices[1] = vi1;
+					faceVertIndices[2] = vi2;
+					faceVertIndices[3] = vi3;
+					gMesh.CreateFace(faceVertIndices);
 				}
 			}
+
+			faceVertIndices.Dispose();
 
 			// Note: scale was applied to vertices earlier
 			var transform = new Transform(parameters.Translation, parameters.Rotation, DefaultScale);
