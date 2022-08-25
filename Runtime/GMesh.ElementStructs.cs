@@ -125,7 +125,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public bool ContainsVertex(int vertexIndex) => vertexIndex == AVertexIndex || vertexIndex == OVertexIndex;
 
 			/// <summary>
@@ -135,7 +135,7 @@ namespace CodeSmile.GraphMesh
 			/// <param name="v0Index"></param>
 			/// <param name="v1Index"></param>
 			/// <returns>True if the two indices are either A's and O's indices or O's and A's indices of the edge.</returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public bool IsConnectingVertices(int v0Index, int v1Index) => v0Index == AVertexIndex && v1Index == OVertexIndex ||
 			                                                              v0Index == OVertexIndex && v1Index == AVertexIndex;
 
@@ -144,7 +144,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="otherEdge"></param>
 			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public bool IsConnectingVertices(in Edge otherEdge) => IsConnectingVertices(otherEdge.AVertexIndex, otherEdge.OVertexIndex);
 
 			/// <summary>
@@ -154,7 +154,7 @@ namespace CodeSmile.GraphMesh
 			/// <param name="vertexIndex">one of the two vertex indexes of the edge</param>
 			/// <param name="noThrow">If true, will not throw exception if vertexIndex is neither A nor O.</param>
 			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetOppositeVertexIndex(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex :
 				vertexIndex == OVertexIndex ? AVertexIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
@@ -165,6 +165,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="otherEdge"></param>
 			/// <returns>the vertex index both connect to, or UnsetIndex if they do not connect</returns>
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetConnectingVertexIndex(in Edge otherEdge) =>
 				AVertexIndex == otherEdge.AVertexIndex ? AVertexIndex :
 				AVertexIndex == otherEdge.OVertexIndex ? AVertexIndex : 
@@ -176,7 +177,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? APrevEdgeIndex :
 				vertexIndex == OVertexIndex ? OPrevEdgeIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by {this}");
@@ -186,7 +187,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? ANextEdgeIndex :
 				vertexIndex == OVertexIndex ? ONextEdgeIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by {this}");
@@ -197,7 +198,7 @@ namespace CodeSmile.GraphMesh
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
 			/// <exception cref="InvalidOperationException">Thrown if the vertexIndex is not linked to this edge</exception>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public (int, int) GetDiskCycleIndices(int vertexIndex) => vertexIndex == AVertexIndex ? (APrevEdgeIndex, ANextEdgeIndex) :
 				vertexIndex == OVertexIndex ? (OPrevEdgeIndex, ONextEdgeIndex) :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
@@ -207,44 +208,44 @@ namespace CodeSmile.GraphMesh
 			                                     $"Cycle O <{OPrevEdgeIndex}°{ONextEdgeIndex}>, " +
 			                                     $"Loop [{BaseLoopIndex}]";
 
-			internal int GetOppositeVertexIndexNoThrow(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex : AVertexIndex;
+			[BurstCompile] internal int GetOppositeVertexIndexNoThrow(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex : AVertexIndex;
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void SetPrevEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
 				if (vertexIndex == AVertexIndex) APrevEdgeIndex = otherEdgeIndex;
 				else OPrevEdgeIndex = otherEdgeIndex;
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void SetNextEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
 				if (vertexIndex == AVertexIndex) ANextEdgeIndex = otherEdgeIndex;
 				else ONextEdgeIndex = otherEdgeIndex;
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void SetDiskCycleIndices(int vertexIndex, int edgeIndex)
 			{
 				SetPrevEdgeIndex(vertexIndex, edgeIndex);
 				SetNextEdgeIndex(vertexIndex, edgeIndex);
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void CopyDiskCycleFrom(int vertexIndex, in Edge sourceEdge)
 			{
 				SetPrevEdgeIndex(vertexIndex, sourceEdge.GetPrevEdgeIndex(vertexIndex));
 				SetNextEdgeIndex(vertexIndex, sourceEdge.GetNextEdgeIndex(vertexIndex));
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void SetOppositeVertexIndex(int oppositeVertexIndex, int newVertexIndex)
 			{
 				if (oppositeVertexIndex == AVertexIndex) OVertexIndex = newVertexIndex;
 				else AVertexIndex = newVertexIndex;
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void Invalidate() => Index = UnsetIndex;
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]

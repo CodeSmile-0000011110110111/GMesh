@@ -129,6 +129,7 @@ namespace CodeSmile.GraphMesh
 			var edge = Edge.Create(vertexIndexA, vertexIndexO);
 			var edgeIndex = AddEdge(ref edge);
 			var jobHandle = CreateEdgeInternal_UpdateEdgeCycle(ref edge, vertexIndexA, vertexIndexO);
+			//AddEdgeVertexPair(vertexIndexA, vertexIndexO, edgeIndex);
 			return (edgeIndex, jobHandle);
 		}
 
@@ -145,16 +146,16 @@ namespace CodeSmile.GraphMesh
 			var vCount = vertexIndices.Length;
 			edgeIndices = new NativeArray<int>(vCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
-			var loopCount = vCount - 1;
+			var iterCount = vCount - 1;
 			JobHandle jobHandle;
-			for (var i = 0; i < loopCount; i++)
+			for (var i = 0; i < iterCount; i++)
 			{
 				(edgeIndices[i], jobHandle) = CreateEdge(vertexIndices[i], vertexIndices[i + 1]);
 				jobHandle.Complete();
 			}
 
 			// last one closes the loop
-			(edgeIndices[loopCount], jobHandle) = CreateEdge(vertexIndices[loopCount], vertexIndices[0]);
+			(edgeIndices[iterCount], jobHandle) = CreateEdge(vertexIndices[iterCount], vertexIndices[0]);
 			jobHandle.Complete();
 		}
 
@@ -216,12 +217,6 @@ namespace CodeSmile.GraphMesh
 			var vCount = vertexIndices.Length;
 			job.Schedule(vCount, default).Complete();
 			_loopCount += vCount;
-
-			/*
-			var vCount = vertexIndices.Length;
-			for (var i = 0; i < vCount; i++)
-				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndices[i]);
-				*/
 		}
 
 		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
@@ -332,7 +327,13 @@ namespace CodeSmile.GraphMesh
 				var newLoopIndex = loops.Length;
 				var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
 				var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
-				var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
+				//var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
+				var loop = new Loop
+				{
+					FaceIndex = faceIndex, EdgeIndex = edgeIndex, StartVertexIndex = vertexIndex,
+					PrevLoopIndex = prevLoopIdx, NextLoopIndex = nextLoopIdx, 
+					PrevRadialLoopIndex = prevRadialIdx, NextRadialLoopIndex = nextRadialIdx, 
+				};
 				AddLoop(ref loop);
 			}
 
@@ -342,25 +343,25 @@ namespace CodeSmile.GraphMesh
 				var nextRadialLoopIndex = newLoopIndex;
 
 				var edge = GetEdge(edgeIndex);
-				if (edge.BaseLoopIndex == UnsetIndex)
+				if (Hint.Unlikely(edge.BaseLoopIndex == UnsetIndex))
 					edge.BaseLoopIndex = newLoopIndex;
 				else
 				{
-					var edgeLoop = GetLoop(edge.BaseLoopIndex);
-					prevRadialLoopIndex = edgeLoop.Index;
-					nextRadialLoopIndex = edgeLoop.NextRadialLoopIndex;
+					var edgeBaseLoop = GetLoop(edge.BaseLoopIndex);
+					prevRadialLoopIndex = edgeBaseLoop.Index;
+					nextRadialLoopIndex = edgeBaseLoop.NextRadialLoopIndex;
 
-					if (edgeLoop.NextRadialLoopIndex == edgeLoop.Index)
-						edgeLoop.PrevRadialLoopIndex = newLoopIndex;
+					if (Hint.Likely(edgeBaseLoop.NextRadialLoopIndex == edgeBaseLoop.Index))
+						edgeBaseLoop.PrevRadialLoopIndex = newLoopIndex;
 					else
 					{
-						var nextRadialLoop = GetLoop(edgeLoop.NextRadialLoopIndex);
+						var nextRadialLoop = GetLoop(edgeBaseLoop.NextRadialLoopIndex);
 						nextRadialLoop.PrevRadialLoopIndex = newLoopIndex;
 						SetLoop(nextRadialLoop);
 					}
 
-					edgeLoop.NextRadialLoopIndex = newLoopIndex;
-					SetLoop(edgeLoop);
+					edgeBaseLoop.NextRadialLoopIndex = newLoopIndex;
+					SetLoop(edgeBaseLoop);
 				}
 
 				SetEdge(edge);
@@ -374,7 +375,7 @@ namespace CodeSmile.GraphMesh
 				var nextLoopIndex = newLoopIndex;
 
 				var face = GetFace(faceIndex);
-				if (face.FirstLoopIndex == UnsetIndex)
+				if (Hint.Unlikely(face.FirstLoopIndex == UnsetIndex))
 				{
 					face.FirstLoopIndex = newLoopIndex;
 					SetFace(face);
@@ -389,7 +390,7 @@ namespace CodeSmile.GraphMesh
 					prevLoop.NextLoopIndex = newLoopIndex;
 
 					// update nextLoop or re-assign it as firstLoop, depends on whether they are the same
-					if (prevLoopIndex != nextLoopIndex)
+					if (Hint.Likely(prevLoopIndex != nextLoopIndex))
 						SetLoop(prevLoop);
 					else
 						firstLoop = prevLoop;

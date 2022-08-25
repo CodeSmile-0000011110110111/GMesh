@@ -3,6 +3,7 @@
 
 using System;
 using Unity.Collections;
+using UnityEngine;
 using static Unity.Mathematics.math;
 using float3 = Unity.Mathematics.float3;
 
@@ -88,67 +89,7 @@ namespace CodeSmile.GraphMesh
 		/// <exception cref="ArgumentException"></exception>
 		public static GMesh Plane(GMeshPlane parameters)
 		{
-			if (parameters.VertexCountX < 2 || parameters.VertexCountY < 2)
-				throw new ArgumentException("minimum of 2 vertices per axis required");
-
-			var subdivisions = int2(parameters.VertexCountX - 1, parameters.VertexCountY - 1);
-			var vertexCount = parameters.VertexCountX * parameters.VertexCountY;
-			var vertices = new NativeArray<float3>(vertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-
-			// create vertices
-			var scale = float3(parameters.Scale, DefaultScale);
-			var centerOffset = float3(.5f, .5f, 0f) * scale;
-			var step = 1f / float3(subdivisions, 1f) * scale;
-			var vIndex = 0;
-			for (var y = 0; y < parameters.VertexCountY; y++)
-				for (var x = 0; x < parameters.VertexCountX; x++)
-					vertices[vIndex++] = float3(x, y, 0f) * step - centerOffset;
-
-			var gMesh = new GMesh();
-			gMesh.CreateVertices(vertices);
-			vertices.Dispose();
-
-			// create quad faces
-			var faceVertIndices = new NativeArray<int>(4, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-			for (var y = 0; y < subdivisions.y; y++)
-			{
-				for (var x = 0; x < subdivisions.x; x++)
-				{
-					// each quad has (0,0) in the lower left corner with verts: v0=down-left, v1=up-left, v2=up-right, v3=down-right
-					// +z axis points towards the plane and plane normal is Vector3.back = (0,0,-1)
-
-					// calculate quad's vertex indices
-					var vi0 = y * parameters.VertexCountX + x;
-					var vi1 = (y + 1) * parameters.VertexCountX + x;
-					var vi2 = (y + 1) * parameters.VertexCountX + x + 1;
-					var vi3 = y * parameters.VertexCountX + x + 1;
-
-					// TODO: add UV to face
-					// get the vertices
-					//var v0 = vertices[vi0];
-					//var v1 = vertices[vi1];
-					//var v2 = vertices[vi2];
-					//var v3 = vertices[vi3];
-					// derive UV from vertices
-					//var uv01 = new float4(v0.x, v0.y, v1.x, v1.y);
-					//var uv23 = new float4(v2.x, v2.y, v3.x, v3.y);
-
-					faceVertIndices[0] = vi0;
-					faceVertIndices[1] = vi1;
-					faceVertIndices[2] = vi2;
-					faceVertIndices[3] = vi3;
-					gMesh.CreateFace(faceVertIndices);
-				}
-			}
-
-			faceVertIndices.Dispose();
-
-			// Note: scale was applied to vertices earlier
-			var transform = new Transform(parameters.Translation, parameters.Rotation, DefaultScale);
-			//gMesh.Pivot = parameters.Pivot;
-			gMesh.ApplyTransform(transform);
-
-			return gMesh;
+			return CreatePlaneJobified(parameters);
 		}
 
 		/// <summary>

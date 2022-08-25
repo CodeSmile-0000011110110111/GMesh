@@ -2,6 +2,8 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using System.Runtime.InteropServices;
+using Unity.Burst;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -36,7 +38,7 @@ namespace CodeSmile.GraphMesh
 		/// <summary>
 		/// GMesh transform representation.
 		/// </summary>
-		[Serializable]
+		[BurstCompile] [Serializable] [StructLayout(LayoutKind.Sequential)]
 		public struct Transform
 		{
 			[Tooltip("Offset from origin (0,0,0)")]

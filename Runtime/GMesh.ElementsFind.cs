@@ -2,10 +2,12 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 
 namespace CodeSmile.GraphMesh
 {
@@ -80,6 +82,18 @@ namespace CodeSmile.GraphMesh
 		public int FindExistingEdgeIndex(int v0Index, int v1Index)
 		{
 			/*
+			var pair = new int2(v0Index, v1Index);
+			if (_edgeIndexForVertices.ContainsKey(pair))
+				return _edgeIndexForVertices[pair];
+
+			pair = pair.yx;
+			if (_edgeIndexForVertices.ContainsKey(pair))
+				return _edgeIndexForVertices[pair];
+
+			return UnsetIndex;
+			*/
+
+			/*
 			var job = new FindExistingEdgeIndexJob
 				{ vertices = _vertices, edges = _edges, existingEdgeIndex = UnsetIndex, v0Index = v0Index, v1Index = v1Index };
 			job.Schedule().Complete();
@@ -110,6 +124,8 @@ namespace CodeSmile.GraphMesh
 
 			return UnsetIndex;
 		}
+
+		//[MethodImpl(MethodImplOptions.AggressiveInlining)] private void AddEdgeVertexPair(int vertexIndexA, int vertexIndexO, int edgeIndex) => _edgeIndexForVertices.Add(new int2(vertexIndexA, vertexIndexO), edgeIndex);
 
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		private struct FindExistingEdgeIndexJob : IJob
@@ -148,8 +164,10 @@ namespace CodeSmile.GraphMesh
 
 					maxIterations--;
 					if (maxIterations == 0)
+					{
 						throw new Exception(
 							$"{nameof(FindExistingEdgeIndexJob)}: possible infinite loop due to malformed mesh graph around {edge}");
+					}
 				} while (edge.Index != edgeIndex);
 			}
 		}

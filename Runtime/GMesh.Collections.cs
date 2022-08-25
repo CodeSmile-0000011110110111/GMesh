@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace CodeSmile.GraphMesh
@@ -15,6 +16,7 @@ namespace CodeSmile.GraphMesh
 		private NativeList<Edge> _edges = new(Allocator.Persistent);
 		private NativeList<Loop> _loops = new(Allocator.Persistent);
 		private NativeList<Face> _faces = new(Allocator.Persistent);
+		//private NativeParallelHashMap<int2, int> _edgeIndexForVertices = new(0, Allocator.Persistent);
 
 		private int _vertexCount;
 		private int _edgeCount;
@@ -98,10 +100,7 @@ namespace CodeSmile.GraphMesh
 			_edges.Dispose();
 			_loops.Dispose();
 			_faces.Dispose();
-			_vertices = default;
-			_edges = default;
-			_loops = default;
-			_faces = default;
+			//_edgeIndexForVertices.Dispose();
 			_vertexCount = UnsetIndex;
 			_edgeCount = UnsetIndex;
 			_loopCount = UnsetIndex;
@@ -163,7 +162,7 @@ namespace CodeSmile.GraphMesh
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int AddVertex(ref Vertex vertex)
 		{
-			Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
+			//Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
 			vertex.Index = _vertices.Length;
 			_vertices.Add(vertex);
 			_vertexCount++;
@@ -173,7 +172,7 @@ namespace CodeSmile.GraphMesh
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int AddEdge(ref Edge edge)
 		{
-			Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
+			//Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
 			edge.Index = _edges.Length;
 			_edges.Add(edge);
 			_edgeCount++;
@@ -181,19 +180,19 @@ namespace CodeSmile.GraphMesh
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int AddLoop(ref Loop loop)
+		internal void AddLoop(ref Loop loop)
 		{
-			Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
+			//Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
 			loop.Index = _loops.Length;
 			_loops.Add(loop);
 			_loopCount++;
-			return loop.Index;
+			//return loop.Index;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal int AddFace(ref Face face)
 		{
-			Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
+			//Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
 			face.Index = _faces.Length;
 			_faces.Add(face);
 			_faceCount++;
