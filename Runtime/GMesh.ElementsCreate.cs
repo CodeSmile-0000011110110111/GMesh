@@ -119,10 +119,10 @@ namespace CodeSmile.GraphMesh
 		/// <param name="vertexIndexA"></param>
 		/// <param name="vertexIndexO"></param>
 		/// <returns>index of the new edge</returns>
-		public (int, JobHandle) CreateEdge(int vertexIndexA, int vertexIndexO)
+		internal (int, JobHandle) CreateEdge(int vertexIndexA, int vertexIndexO)
 		{
 			// avoid edge duplication: if there is already an edge between edge[0] and edge[1] vertices, return existing edge instead
-			var existingEdgeIndex = FindEdgeIndex(vertexIndexA, vertexIndexO);
+			var existingEdgeIndex = FindExistingEdgeIndex(vertexIndexA, vertexIndexO);
 			if (existingEdgeIndex != UnsetIndex)
 				return (existingEdgeIndex, default);
 
@@ -140,10 +140,10 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="vertexIndices"></param>
 		/// <returns>indices of new edges</returns>
-		public void CreateEdges(in NativeArray<int> vertexIndices, out NativeArray<int> edgeIndices)
+		internal void CreateEdges(in NativeArray<int> vertexIndices, out NativeArray<int> edgeIndices)
 		{
 			var vCount = vertexIndices.Length;
-			edgeIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			edgeIndices = new NativeArray<int>(vCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
 			var loopCount = vCount - 1;
 			JobHandle jobHandle;
@@ -182,7 +182,7 @@ namespace CodeSmile.GraphMesh
 		public void CreateVertices(in NativeArray<float3> positions, out NativeArray<int> vertexIndices)
 		{
 			var vCount = positions.Length;
-			vertexIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			vertexIndices = new NativeArray<int>(vCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			for (var i = 0; i < vCount; i++)
 				vertexIndices[i] = CreateVertex(positions[i]);
 		}
@@ -206,6 +206,24 @@ namespace CodeSmile.GraphMesh
 			return job.Schedule();
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void CreateFaceInternal_CreateLoops(int faceIndex, in NativeArray<int> vertexIndices, in NativeArray<int> edgeIndices)
+		{
+			var job = new CreateLoopsJob
+			{
+				edges = _edges, loops = _loops, faces = _faces, faceIndex = faceIndex, vertexIndices = vertexIndices, edgeIndices = edgeIndices,
+			};
+			var vCount = vertexIndices.Length;
+			job.Schedule(vCount, default).Complete();
+			_loopCount += vCount;
+
+			/*
+			var vCount = vertexIndices.Length;
+			for (var i = 0; i < vCount; i++)
+				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndices[i]);
+				*/
+		}
+
 		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)
 		{
 			var newLoopIndex = LoopCount;
@@ -213,14 +231,6 @@ namespace CodeSmile.GraphMesh
 			var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
 			var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
 			AddLoop(ref loop);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void CreateFaceInternal_CreateLoops(int faceIndex, in NativeArray<int> vertexIndices, in NativeArray<int> edgeIndices)
-		{
-			var vCount = vertexIndices.Length;
-			for (var i = 0; i < vCount; i++)
-				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndices[i]);
 		}
 
 		private (int, int) CreateLoopInternal_UpdateRadialLoopCycle(int newLoopIndex, int edgeIndex)
@@ -286,6 +296,110 @@ namespace CodeSmile.GraphMesh
 			}
 
 			return (prevLoopIndex, nextLoopIndex);
+		}
+
+		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+		private struct CreateLoopsJob : IJobFor
+		{
+			//[ReadOnly] public NativeList<Vertex> vertices;
+			public NativeList<Edge> edges;
+			public NativeList<Loop> loops;
+			public NativeList<Face> faces;
+			[ReadOnly] public NativeArray<int> vertexIndices;
+			[ReadOnly] public NativeArray<int> edgeIndices;
+
+			public int faceIndex;
+
+			//private Vertex GetVertex(int index) => vertices[index];
+			//private void SetVertex(in Vertex vertex) => vertices[vertex.Index] = vertex;
+			private Edge GetEdge(int index) => edges[index];
+			private void SetEdge(in Edge edge) => edges[edge.Index] = edge;
+			private Loop GetLoop(int index) => loops[index];
+			private void SetLoop(in Loop loop) => loops[loop.Index] = loop;
+			private Face GetFace(int index) => faces[index];
+			private void SetFace(in Face face) => faces[face.Index] = face;
+
+			private void AddLoop(ref Loop loop)
+			{
+				loop.Index = loops.Length;
+				loops.Add(loop);
+			}
+
+			public void Execute(int index)
+			{
+				var edgeIndex = edgeIndices[index];
+				var vertexIndex = vertexIndices[index];
+				var newLoopIndex = loops.Length;
+				var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
+				var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
+				var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
+				AddLoop(ref loop);
+			}
+
+			private (int, int) CreateLoopInternal_UpdateRadialLoopCycle(int newLoopIndex, int edgeIndex)
+			{
+				var prevRadialLoopIndex = newLoopIndex;
+				var nextRadialLoopIndex = newLoopIndex;
+
+				var edge = GetEdge(edgeIndex);
+				if (edge.BaseLoopIndex == UnsetIndex)
+					edge.BaseLoopIndex = newLoopIndex;
+				else
+				{
+					var edgeLoop = GetLoop(edge.BaseLoopIndex);
+					prevRadialLoopIndex = edgeLoop.Index;
+					nextRadialLoopIndex = edgeLoop.NextRadialLoopIndex;
+
+					if (edgeLoop.NextRadialLoopIndex == edgeLoop.Index)
+						edgeLoop.PrevRadialLoopIndex = newLoopIndex;
+					else
+					{
+						var nextRadialLoop = GetLoop(edgeLoop.NextRadialLoopIndex);
+						nextRadialLoop.PrevRadialLoopIndex = newLoopIndex;
+						SetLoop(nextRadialLoop);
+					}
+
+					edgeLoop.NextRadialLoopIndex = newLoopIndex;
+					SetLoop(edgeLoop);
+				}
+
+				SetEdge(edge);
+
+				return (prevRadialLoopIndex, nextRadialLoopIndex);
+			}
+
+			private (int, int) CreateLoopInternal_UpdateLoopCycle(int newLoopIndex, int faceIndex)
+			{
+				var prevLoopIndex = newLoopIndex;
+				var nextLoopIndex = newLoopIndex;
+
+				var face = GetFace(faceIndex);
+				if (face.FirstLoopIndex == UnsetIndex)
+				{
+					face.FirstLoopIndex = newLoopIndex;
+					SetFace(face);
+				}
+				else
+				{
+					var firstLoop = GetLoop(face.FirstLoopIndex);
+					nextLoopIndex = firstLoop.Index;
+					prevLoopIndex = firstLoop.PrevLoopIndex;
+
+					var prevLoop = GetLoop(prevLoopIndex);
+					prevLoop.NextLoopIndex = newLoopIndex;
+
+					// update nextLoop or re-assign it as firstLoop, depends on whether they are the same
+					if (prevLoopIndex != nextLoopIndex)
+						SetLoop(prevLoop);
+					else
+						firstLoop = prevLoop;
+
+					firstLoop.PrevLoopIndex = newLoopIndex;
+					SetLoop(firstLoop);
+				}
+
+				return (prevLoopIndex, nextLoopIndex);
+			}
 		}
 
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]

@@ -109,7 +109,7 @@ namespace CodeSmile.GraphMesh
 			vertices.Dispose();
 
 			// create quad faces
-			var faceVertIndices = new NativeArray<int>(4, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			var faceVertIndices = new NativeArray<int>(4, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			for (var y = 0; y < subdivisions.y; y++)
 			{
 				for (var x = 0; x < subdivisions.x; x++)

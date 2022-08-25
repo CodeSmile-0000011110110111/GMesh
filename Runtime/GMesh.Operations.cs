@@ -80,7 +80,7 @@ namespace CodeSmile.GraphMesh
 			{
 				var faceVertices = allFaceGridPositions[gridIndex];
 				// get the face's vertex indices based on their grid positions
-				var vertexIndices = new NativeArray<int>(faceVertices.Length, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+				var vertexIndices = new NativeArray<int>(faceVertices.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 				for (var i = 0; i < faceVertices.Length; i++)
 					vertexIndices[i] = knownGridPositions[faceVertices[i]];
 

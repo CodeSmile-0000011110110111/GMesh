@@ -3,11 +3,10 @@ using CodeSmile.GraphMesh;
 using System;
 using System.Collections;
 using Unity.Mathematics;
-using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
 
-//[ExecuteInEditMode]
+[ExecuteInEditMode]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class GMeshTestBehaviour : MonoBehaviour
 {
@@ -41,7 +40,6 @@ public class GMeshTestBehaviour : MonoBehaviour
 	{
 		AssemblyReloadEvents.beforeAssemblyReload += DisposeGMesh;
 		_meshFilter = GetComponent<MeshFilter>();
-
 		UpdateMesh();
 	}
 
@@ -77,11 +75,8 @@ public class GMeshTestBehaviour : MonoBehaviour
 
 	private void DisposeGMesh()
 	{
-		if (_gMesh != null)
-		{
-			_gMesh.Dispose();
-			_gMesh = null;
-		}
+		_gMesh?.Dispose();
+		_gMesh = null;
 	}
 
 	private IEnumerator UpdateMeshAfterDelay()
@@ -94,7 +89,6 @@ public class GMeshTestBehaviour : MonoBehaviour
 	private void UpdateMesh()
 	{
 		DisposeGMesh();
-
 		_gMesh = CreatePrimitive();
 
 		for (var t = 0; t < _edgeTesselation; t++)
@@ -107,12 +101,12 @@ public class GMeshTestBehaviour : MonoBehaviour
 		if (_logToConsole)
 			_gMesh.DebugLogAllElements();
 
-		#if GMESH_VALIDATION
+#if GMESH_VALIDATION
 		_gMesh.ValidateFaces();
 		_gMesh.ValidateLoops();
 		_gMesh.ValidateEdges();
 		_gMesh.ValidateVertices();
-		#endif
+#endif
 
 		_meshFilter.sharedMesh = _gMesh.ToMesh();
 
@@ -138,6 +132,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 		_centroidMarker.localPosition = _gMesh.CalculateCentroid();
 	}
 
+	/*
 	private static ProfilerMarker marker = new ProfilerMarker("GMesh update test");
 	private void Update()
 	{
@@ -150,6 +145,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 		
 		//Debug.Log("update");
 	}
+	*/
 
 	private GMesh CreatePrimitive() => _primitiveType switch
 	{

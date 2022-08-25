@@ -2,6 +2,10 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using System.Runtime.InteropServices;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
 
 namespace CodeSmile.GraphMesh
 {
@@ -65,7 +69,7 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="edge">Edge to check for, will be assigned to existing one.</param>
 		/// <returns>True if edge exists between v0 and v1. False if there is no edge connecting the two vertices.</returns>
-		public int FindEdgeIndex(in Edge edge) => FindEdgeIndex(edge.AVertexIndex, edge.OVertexIndex);
+		public int FindExistingEdgeIndex(in Edge edge) => FindExistingEdgeIndex(edge.AVertexIndex, edge.OVertexIndex);
 
 		/// <summary>
 		/// Tries to find an existing edge connecting the two vertices (via their indices).
@@ -73,8 +77,15 @@ namespace CodeSmile.GraphMesh
 		/// <param name="v0Index">Index of one vertex</param>
 		/// <param name="v1Index">Index of another vertex</param>
 		/// <returns>True if edge exists between v0 and v1. False if there is no edge connecting the two vertices.</returns>
-		public int FindEdgeIndex(int v0Index, int v1Index)
+		public int FindExistingEdgeIndex(int v0Index, int v1Index)
 		{
+			/*
+			var job = new FindExistingEdgeIndexJob
+				{ vertices = _vertices, edges = _edges, existingEdgeIndex = UnsetIndex, v0Index = v0Index, v1Index = v1Index };
+			job.Schedule().Complete();
+			return job.existingEdgeIndex;
+			*/
+
 			if (v0Index == UnsetIndex || v1Index == UnsetIndex)
 				return UnsetIndex;
 
@@ -94,10 +105,53 @@ namespace CodeSmile.GraphMesh
 
 				maxIterations--;
 				if (maxIterations == 0)
-					throw new Exception($"{nameof(ForEachEdgeInternal)}: possible infinite loop due to malformed mesh graph around {edge}");
+					throw new Exception($"{nameof(FindExistingEdgeIndex)}: possible infinite loop due to malformed mesh graph around {edge}");
 			} while (edge.Index != edgeIndex);
 
 			return UnsetIndex;
+		}
+
+		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+		private struct FindExistingEdgeIndexJob : IJob
+		{
+			[ReadOnly] public NativeList<Vertex> vertices;
+			[ReadOnly] public NativeList<Edge> edges;
+			public int v0Index;
+			public int v1Index;
+			public int existingEdgeIndex;
+
+			private Vertex GetVertex(int index) => vertices[index];
+			private Edge GetEdge(int index) => edges[index];
+
+			public void Execute()
+			{
+				existingEdgeIndex = UnsetIndex;
+				if (v0Index == UnsetIndex || v1Index == UnsetIndex)
+					return;
+
+				var edgeIndex = GetVertex(v0Index).BaseEdgeIndex;
+				if (edgeIndex == UnsetIndex)
+					return;
+
+				// check all edges in cycle, return this edge's index if it points to v1
+				var edge = GetEdge(edgeIndex);
+				var maxIterations = 10000;
+				do
+				{
+					if (edge.ContainsVertex(v1Index))
+					{
+						existingEdgeIndex = edge.Index;
+						break;
+					}
+
+					edge = GetEdge(edge.GetNextEdgeIndex(v0Index));
+
+					maxIterations--;
+					if (maxIterations == 0)
+						throw new Exception(
+							$"{nameof(FindExistingEdgeIndexJob)}: possible infinite loop due to malformed mesh graph around {edge}");
+				} while (edge.Index != edgeIndex);
+			}
 		}
 	}
 }

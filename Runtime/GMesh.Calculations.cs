@@ -22,7 +22,7 @@ namespace CodeSmile.GraphMesh
 			if (vertexCount < 2)
 				throw new ArgumentException("N-Gon, like a decent triangle, requires at least 3 vertices");
 
-			vertices = new NativeArray<float3>(vertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			vertices = new NativeArray<float3>(vertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			var twoPie = 2f * math.PI; // not 2Pac :)
 			for (var i = 0; i < vertexCount; i++)
 			{
