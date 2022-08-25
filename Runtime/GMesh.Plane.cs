@@ -71,7 +71,7 @@ namespace CodeSmile.GraphMesh
 			private Face GetFace(int index) => Faces[index];
 			private void SetFace(in Face face) => Faces[face.Index] = face;
 
-						public void Execute()
+			public void Execute()
 			{
 				// init lists
 				var subdivisions = PlaneVertexCount - 1;
@@ -315,7 +315,6 @@ namespace CodeSmile.GraphMesh
 
 				return (prevLoopIndex, nextLoopIndex);
 			}
-
 		}
 	}
 }
