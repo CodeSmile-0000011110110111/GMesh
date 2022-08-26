@@ -23,9 +23,15 @@ namespace CodeSmile.GraphMesh
 
 			var totalFaceCount = 0;
 			var meshCount = inputMeshes.Count;
+			if (meshCount == 0)
+				throw new InvalidOperationException("nothing to combine - input meshes is empty");
+
 			for (var i = 0; i < meshCount; i++)
 				totalFaceCount += inputMeshes[i].FaceCount;
 
+			if (totalFaceCount == 0)
+				throw new InvalidOperationException("input meshes do not have a single face");
+			
 			var allFaceGridPositions = new int3[totalFaceCount][];
 			var allFaceGridPosIndex = 0;
 

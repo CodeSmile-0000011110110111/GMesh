@@ -22,31 +22,21 @@ namespace CodeSmile.GraphMesh
 
 			var gMesh = new GMesh();
 			var jobHandle = gMesh.ScheduleCreatePlaneJob(parameters);
-			jobHandle.Complete();
-
-			gMesh.SetElementsCountAfterBatchOperation();
+			//jobHandle.Complete();
 
 			return gMesh;
 		}
 
-		private void SetElementsCountAfterBatchOperation()
-		{
-			_vertexCount = _vertices.Length;
-			_edgeCount = _edges.Length;
-			_loopCount = _loops.Length;
-			_faceCount = _faces.Length;
-		}
-
 		private JobHandle ScheduleCreatePlaneJob(GMeshPlane parameters)
 		{
-			var transform = new Transform(parameters.Translation, parameters.Rotation, DefaultScale);
 			var job = new CreatePlaneJob
 			{
-				Data = new GraphData(ref _vertices, ref _edges, ref _loops, ref _faces),
-				PlaneVertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY),
+				Data = _data, PlaneVertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY),
 				Translation = parameters.Translation, Rotation = parameters.Rotation, Scale = float3(parameters.Scale, DefaultScale),
 			};
-			return job.Schedule();
+			job.Schedule().Complete();
+
+			return default;
 		}
 
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
@@ -142,6 +132,11 @@ namespace CodeSmile.GraphMesh
 
 				edgeIndices.Dispose();
 				fvIndices.Dispose();
+
+				Data.VertexCount = Data.Vertices.Length;
+				Data.EdgeCount = Data.Edges.Length;
+				Data.LoopCount = Data.Loops.Length;
+				Data.FaceCount = Data.Faces.Length;
 			}
 
 			private int FindExistingEdgeIndex(int v0Index, int v1Index)
@@ -171,7 +166,7 @@ namespace CodeSmile.GraphMesh
 					Index = edgeIndex, BaseLoopIndex = UnsetIndex, AVertexIndex = v0Index, OVertexIndex = v1Index,
 					APrevEdgeIndex = UnsetIndex, ANextEdgeIndex = UnsetIndex, OPrevEdgeIndex = UnsetIndex, ONextEdgeIndex = UnsetIndex,
 				};
-				Data.AddEdge(edge);
+				Data.AddEdge(ref edge);
 
 				// Disk Cycle Vertex 0
 				{

@@ -1,61 +1,49 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
-		private NativeList<Vertex> _vertices = new(Allocator.Persistent);
-		private NativeList<Edge> _edges = new(Allocator.Persistent);
-		private NativeList<Loop> _loops = new(Allocator.Persistent);
-		private NativeList<Face> _faces = new(Allocator.Persistent);
-		//private NativeParallelHashMap<int2, int> _edgeIndexForVertices = new(0, Allocator.Persistent);
-
-		private int _vertexCount;
-		private int _edgeCount;
-		private int _loopCount;
-		private int _faceCount;
+		private GraphData _data = new(Allocator.Persistent);
 
 		/// <summary>
 		/// The read-only collection of vertices.
 		/// </summary>
-		public NativeArray<Vertex>.ReadOnly Vertices => _vertices.AsParallelReader();
+		public NativeArray<Vertex>.ReadOnly Vertices => _data.Vertices;
 		/// <summary>
 		/// The read-only collection of edges.
 		/// </summary>
-		public NativeArray<Edge>.ReadOnly Edges => _edges.AsParallelReader();
+		public NativeArray<Edge>.ReadOnly Edges => _data.Edges;
 		/// <summary>
 		/// The read-only collection of loops.
 		/// </summary>
-		public NativeArray<Loop>.ReadOnly Loops => _loops.AsParallelReader();
+		public NativeArray<Loop>.ReadOnly Loops => _data.Loops;
 		/// <summary>
 		/// The read-only collection of faces.
 		/// </summary>
-		public NativeArray<Face>.ReadOnly Faces => _faces.AsParallelReader();
+		public NativeArray<Face>.ReadOnly Faces => _data.Faces;
 
 		/// <summary>
 		/// Number of vertices in the mesh.
 		/// </summary>
-		public int VertexCount => _vertexCount;
+		public int VertexCount => _data.VertexCount;
 		/// <summary>
 		/// Number of edges in the mesh.
 		/// </summary>
-		public int EdgeCount => _edgeCount;
+		public int EdgeCount => _data.EdgeCount;
 		/// <summary>
 		/// Number of loops in the mesh.
 		/// </summary>
-		public int LoopCount => _loopCount;
+		public int LoopCount => _data.LoopCount;
 		/// <summary>
 		/// Number of faces in the mesh.
 		/// </summary>
-		public int FaceCount => _faceCount;
+		public int FaceCount => _data.FaceCount;
 
 		/// <summary>
 		/// Check if the GMesh needs disposing. For developers who get easily confused. :)
@@ -65,23 +53,7 @@ namespace CodeSmile.GraphMesh
 		/// Note that indiscriminately calling Dispose() multiple times will throw an exception.
 		/// </summary>
 		/// <value></value>
-		public bool IsDisposed => !(_vertices.IsCreated && _edges.IsCreated && _loops.IsCreated && _faces.IsCreated);
-
-		/// <summary>
-		/// Calls Dispose() on all non-null meshes in the collection that have not been disposed yet.
-		/// </summary>
-		/// <param name="meshes"></param>
-		public static void DisposeAll(IEnumerable<GMesh> meshes)
-		{
-			if (meshes != null)
-			{
-				foreach (var mesh in meshes)
-				{
-					if (mesh != null && mesh.IsDisposed == false)
-						mesh.Dispose();
-				}
-			}
-		}
+		public bool IsDisposed => _data.IsDisposed;
 
 		/// <summary>
 		/// Dispose of internal native collections.
@@ -91,158 +63,84 @@ namespace CodeSmile.GraphMesh
 		/// Note: native collections cannot be disposed of automatically in the Finalizer, see:
 		/// https://forum.unity.com/threads/why-disposing-nativearray-in-a-finalizer-is-unacceptable.531494/
 		/// </summary>
-		public void Dispose()
-		{
-			if (IsDisposed)
-				throw new InvalidOperationException("Already disposed! Use IsDisposed property to check disposed state.");
-
-			_vertices.Dispose();
-			_edges.Dispose();
-			_loops.Dispose();
-			_faces.Dispose();
-			//_edgeIndexForVertices.Dispose();
-			_vertexCount = UnsetIndex;
-			_edgeCount = UnsetIndex;
-			_loopCount = UnsetIndex;
-			_faceCount = UnsetIndex;
-		}
+		public void Dispose() => _data.Dispose();
 
 		/// <summary>
 		/// Gets a vertex by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Vertex GetVertex(int index) => _vertices[index];
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Vertex GetVertex(int index) => _data.GetVertex(index);
 
 		/// <summary>
 		/// Gets an edge by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Edge GetEdge(int index) => _edges[index];
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Edge GetEdge(int index) => _data.GetEdge(index);
 
 		/// <summary>
 		/// Gets a loop by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Loop GetLoop(int index) => _loops[index];
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Loop GetLoop(int index) => _data.GetLoop(index);
 
 		/// <summary>
 		/// Gets a face by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Face GetFace(int index) => _faces[index];
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Face GetFace(int index) => _data.GetFace(index);
 
 		/// <summary>
 		/// Sets (updates) a vertex in the list using its index.
 		/// </summary>
 		/// <param name="v"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetVertex(in Vertex v) => _vertices[v.Index] = v;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetVertex(in Vertex v) => _data.SetVertex(v);
 
 		/// <summary>
 		/// Sets (updates) an edge in the list using its index.
 		/// </summary>
 		/// <param name="e"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetEdge(in Edge e) => _edges[e.Index] = e;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetEdge(in Edge e) => _data.SetEdge(e);
 
 		/// <summary>
 		/// Sets (updates) a loop in the list using its index.
 		/// </summary>
 		/// <param name="l"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetLoop(in Loop l) => _loops[l.Index] = l;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetLoop(in Loop l) => _data.SetLoop(l);
 
 		/// <summary>
 		/// Sets (updates) a face in the list using its index.
 		/// </summary>
 		/// <param name="f"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _faces[f.Index] = f;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _data.SetFace(f);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int AddVertex(ref Vertex vertex)
-		{
-			//Debug.Assert(vertex.Index == UnsetIndex, "Index must not be set before Add(element)");
-			vertex.Index = _vertices.Length;
-			_vertices.Add(vertex);
-			_vertexCount++;
-			return vertex.Index;
-		}
+		internal int AddVertex(ref Vertex vertex) => _data.AddVertex(ref vertex);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int AddEdge(ref Edge edge)
-		{
-			//Debug.Assert(edge.Index == UnsetIndex, "Index must not be set before Add(element)");
-			edge.Index = _edges.Length;
-			_edges.Add(edge);
-			_edgeCount++;
-			return edge.Index;
-		}
+		internal int AddEdge(ref Edge edge) => _data.AddEdge(ref edge);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal void AddLoop(ref Loop loop)
-		{
-			//Debug.Assert(loop.Index == UnsetIndex, "Index must not be set before Add(element)");
-			loop.Index = _loops.Length;
-			_loops.Add(loop);
-			_loopCount++;
-			//return loop.Index;
-		}
+		internal void AddLoop(ref Loop loop) => _data.AddLoop(ref loop);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal int AddFace(ref Face face)
-		{
-			//Debug.Assert(face.Index == UnsetIndex, "Index must not be set before Add(element)");
-			face.Index = _faces.Length;
-			_faces.Add(face);
-			_faceCount++;
-			return face.Index;
-		}
+		internal int AddFace(ref Face face) => _data.AddFace(ref face);
+
 		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);
 		//private void RemoveEdge(int index) => _edges.RemoveAt(index);
 		//private void RemoveLoop(int index) => _loops.RemoveAt(index);
 		//private void RemoveFace(int index) => _faces.RemoveAt(index);
 
-		internal void InvalidateVertex(int index)
-		{
-			var vertex = GetVertex(index);
-			Debug.Assert(vertex.Index > UnsetIndex, $"already invalidated {index}: {vertex}");
-			Debug.Assert(_vertexCount > 0);
-			vertex.Invalidate();
-			_vertices[index] = vertex;
-			_vertexCount--;
-		}
+		internal void InvalidateVertex(int index) => _data.InvalidateVertex(index);
 
-		internal void InvalidateEdge(int index)
-		{
-			var edge = GetEdge(index);
-			Debug.Assert(edge.Index > UnsetIndex, $"already invalidated {index}: {edge}");
-			Debug.Assert(_edgeCount > 0);
-			edge.Invalidate();
-			_edges[index] = edge;
-			_edgeCount--;
-		}
+		internal void InvalidateEdge(int index) => _data.InvalidateEdge(index);
 
-		internal void InvalidateLoop(int index)
-		{
-			var loop = GetLoop(index);
-			Debug.Assert(loop.Index > UnsetIndex, $"already invalidated {index}: {loop}");
-			Debug.Assert(_loopCount > 0);
-			loop.Invalidate();
-			_loops[index] = loop;
-			_loopCount--;
-			Debug.Assert(_loopCount >= 0);
-		}
+		internal void InvalidateLoop(int index) => _data.InvalidateLoop(index);
 
-		internal void InvalidateFace(int index)
-		{
-			var face = GetFace(index);
-			Debug.Assert(face.Index > UnsetIndex, $"already invalidated {index}: {face}");
-			Debug.Assert(_faceCount > 0);
-			face.Invalidate();
-			_faces[index] = face;
-			_faceCount--;
-		}
+		internal void InvalidateFace(int index) => _data.InvalidateFace(index);
 
 		private void RemoveInvalidatedElements()
 		{

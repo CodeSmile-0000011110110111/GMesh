@@ -146,8 +146,8 @@ namespace CodeSmile.GraphMesh
 			var vCount = vertexIndices.Length;
 			edgeIndices = new NativeArray<int>(vCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
-			var iterCount = vCount - 1;
 			JobHandle jobHandle;
+			var iterCount = vCount - 1;
 			for (var i = 0; i < iterCount; i++)
 			{
 				(edgeIndices[i], jobHandle) = CreateEdge(vertexIndices[i], vertexIndices[i + 1]);
@@ -203,20 +203,22 @@ namespace CodeSmile.GraphMesh
 
 		private JobHandle CreateEdgeInternal_UpdateEdgeCycle(ref Edge edge, int v0Index, int v1Index)
 		{
-			var job = new UpdateEdgeCycleJob { vertices = _vertices, edges = _edges, edge = edge, v0Index = v0Index, v1Index = v1Index };
+			// FIXME
+			var job = new UpdateEdgeCycleJob { vertices = _data._vertices, edges = _data._edges, edge = edge, v0Index = v0Index, v1Index = v1Index };
 			return job.Schedule();
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void CreateFaceInternal_CreateLoops(int faceIndex, in NativeArray<int> vertexIndices, in NativeArray<int> edgeIndices)
 		{
+			// FIXME
 			var job = new CreateLoopsJob
 			{
-				edges = _edges, loops = _loops, faces = _faces, faceIndex = faceIndex, vertexIndices = vertexIndices, edgeIndices = edgeIndices,
+				edges = _data._edges, loops = _data._loops, faces = _data._faces, faceIndex = faceIndex, vertexIndices = vertexIndices, edgeIndices = edgeIndices,
 			};
 			var vCount = vertexIndices.Length;
 			job.Schedule(vCount, default).Complete();
-			_loopCount += vCount;
+			_data.LoopCount += vCount;
 		}
 
 		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)

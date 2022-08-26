@@ -71,14 +71,7 @@ namespace CodeSmile.GraphMesh
 		public GMesh(GMesh other)
 		{
 			_pivot = other._pivot;
-			_vertexCount = other._vertexCount;
-			_edgeCount = other._edgeCount;
-			_loopCount = other._loopCount;
-			_faceCount = other._faceCount;
-			_vertices.AddRange(other._vertices);
-			_edges.AddRange(other._edges);
-			_loops.AddRange(other._loops);
-			_faces.AddRange(other._faces);
+			_data = new GraphData(other._data);
 		}
 
 		/// <summary>
@@ -90,6 +83,22 @@ namespace CodeSmile.GraphMesh
 			CreateFace(vertexPositions);
 			if (disposeInputArray)
 				vertexPositions.Dispose();
+		}
+		
+		/// <summary>
+		/// Calls Dispose() on all non-null meshes in the collection that have not been disposed yet.
+		/// </summary>
+		/// <param name="meshes"></param>
+		public static void DisposeAll(IEnumerable<GMesh> meshes)
+		{
+			if (meshes != null)
+			{
+				foreach (var mesh in meshes)
+				{
+					if (mesh != null && mesh.IsDisposed == false)
+						mesh.Dispose();
+				}
+			}
 		}
 	}
 }
