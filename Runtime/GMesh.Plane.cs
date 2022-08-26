@@ -22,7 +22,7 @@ namespace CodeSmile.GraphMesh
 
 			var gMesh = new GMesh();
 			var jobHandle = gMesh.ScheduleCreatePlaneJob(parameters);
-			//jobHandle.Complete();
+			jobHandle.Complete();
 
 			return gMesh;
 		}
@@ -34,9 +34,7 @@ namespace CodeSmile.GraphMesh
 				Data = _data, PlaneVertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY),
 				Translation = parameters.Translation, Rotation = parameters.Rotation, Scale = float3(parameters.Scale, DefaultScale),
 			};
-			job.Schedule().Complete();
-
-			return default;
+			return job.Schedule();
 		}
 
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]

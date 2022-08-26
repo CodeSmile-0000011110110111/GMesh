@@ -2,7 +2,6 @@
 // Usage is bound to the Unity Asset Store Terms of Service and EULA: https://unity3d.com/legal/as_terms
 
 using System;
-using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -83,22 +82,6 @@ namespace CodeSmile.GraphMesh
 			CreateFace(vertexPositions);
 			if (disposeInputArray)
 				vertexPositions.Dispose();
-		}
-		
-		/// <summary>
-		/// Calls Dispose() on all non-null meshes in the collection that have not been disposed yet.
-		/// </summary>
-		/// <param name="meshes"></param>
-		public static void DisposeAll(IEnumerable<GMesh> meshes)
-		{
-			if (meshes != null)
-			{
-				foreach (var mesh in meshes)
-				{
-					if (mesh != null && mesh.IsDisposed == false)
-						mesh.Dispose();
-				}
-			}
 		}
 	}
 }

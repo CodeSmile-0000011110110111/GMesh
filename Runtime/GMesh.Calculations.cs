@@ -3,6 +3,8 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
 
@@ -10,6 +12,8 @@ namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
+		private Calculate _calculate;
+
 		/// <summary>
 		/// Calculates vertices for an n-gon with the given number of vertices and scale where vertices go in clockwise order around
 		/// the center (0,0,0) with first vertex position (0,0,scale).
@@ -17,13 +21,14 @@ namespace CodeSmile.GraphMesh
 		/// <param name="vertexCount"></param>
 		/// <param name="scale"></param>
 		/// <param name="vertices">Returned NativeArray of vertices, caller is responsible for disposing this array.</param>
-		public static void CalculatePolygonVertices(int vertexCount, float scale, out NativeArray<float3> vertices)
+		[BurstCompile]
+		public static void CalculateRadialPolygonVertices(int vertexCount, float scale, out NativeArray<float3> vertices)
 		{
 			if (vertexCount < 2)
-				throw new ArgumentException("N-Gon, like a decent triangle, requires at least 3 vertices");
+				throw new ArgumentException("polygon requires at least 3 vertices");
 
 			vertices = new NativeArray<float3>(vertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-			var twoPie = 2f * math.PI; // not 2Pac :)
+			var twoPie = 2f * math.PI; // not: 2Pac :)
 			for (var i = 0; i < vertexCount; i++)
 			{
 				var angle = i * twoPie / vertexCount;
@@ -36,27 +41,13 @@ namespace CodeSmile.GraphMesh
 		/// Equals sum of all vertex positions divided by number of vertices. 
 		/// </summary>
 		/// <returns></returns>
-		public float3 CalculateCentroid()
-		{
-			// TODO: implement using jobs
-			var sum = float3.zero;
-			var validVertexCount = 0;
-			for (var i = 0; i < VertexCount; i++)
-			{
-				var v = GetVertex(i);
-				if (v.IsValid)
-				{
-					sum += v.Position;
-					validVertexCount++;
-				}
-			}
-			return sum / validVertexCount;
-		}
+		
+		public float3 CalculateCentroid() => _calculate.Centroid(_data);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateFaceCentroid(int faceIndex) => CalculateCentroid(GetFace(faceIndex));
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateCentroid(in Face face)
 		{
 			if (face.IsValid == false)
@@ -73,10 +64,10 @@ namespace CodeSmile.GraphMesh
 			return sumOfVertexPositions / loopCount;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateEdgeCenter(int edgeIndex) => CalculateCenter(GetEdge(edgeIndex));
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateCenter(in Edge edge)
 		{
 			if (edge.IsValid == false)
@@ -85,13 +76,13 @@ namespace CodeSmile.GraphMesh
 			return CalculateCenter(edge.AVertexIndex, edge.OVertexIndex);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateCenter(int vertex0Index, int vertex1Index) => CalculateCenter(GetVertex(vertex0Index), GetVertex(vertex1Index));
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateCenter(in Vertex v0, in Vertex v1) => CalculateCenter(v0.Position, v1.Position);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public float3 CalculateCenter(float3 pos0, float3 pos1) => pos0 + (pos1 - pos0) * 0.5f;
 
 		public int CalculateEdgeCount(int vertexIndex) => CalculateEdgeCount(GetVertex(vertexIndex));
@@ -101,6 +92,23 @@ namespace CodeSmile.GraphMesh
 			var edgeCount = 0;
 			ForEachEdge(vertex, e => edgeCount++);
 			return edgeCount;
+		}
+
+		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+		private struct Calculate
+		{
+			public float3 Centroid(in GraphData data)
+			{
+				// TODO: implement using jobs
+				var sum = float3.zero;
+				var vCount = data.Vertices.Length; // enumerate the entire list
+				for (var i = 0; i < vCount; i++)
+				{
+					var v = data.GetVertex(i);
+					sum += math.select(float3.zero, v.Position, v.IsValid);
+				}
+				return sum / data.VertexCount;
+			}
 		}
 	}
 }

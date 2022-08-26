@@ -125,7 +125,7 @@ namespace CodeSmile.GraphMesh
 			return UnsetIndex;
 		}
 
-		//[MethodImpl(MethodImplOptions.AggressiveInlining)] private void AddEdgeVertexPair(int vertexIndexA, int vertexIndexO, int edgeIndex) => _edgeIndexForVertices.Add(new int2(vertexIndexA, vertexIndexO), edgeIndex);
+		// private void AddEdgeVertexPair(int vertexIndexA, int vertexIndexO, int edgeIndex) => _edgeIndexForVertices.Add(new int2(vertexIndexA, vertexIndexO), edgeIndex);
 
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		private struct FindExistingEdgeIndexJob : IJob

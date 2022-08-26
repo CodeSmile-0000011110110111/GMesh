@@ -75,7 +75,7 @@ namespace CodeSmile.GraphMesh
 		/// <returns></returns>
 		public static GMesh Polygon(int vertexCount = 3, float scale = DefaultScale)
 		{
-			CalculatePolygonVertices(vertexCount, scale, out var vertices);
+			CalculateRadialPolygonVertices(vertexCount, scale, out var vertices);
 			var gMesh = new GMesh(vertices);
 			vertices.Dispose();
 			return gMesh;

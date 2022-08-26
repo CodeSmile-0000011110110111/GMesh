@@ -43,7 +43,7 @@ namespace CodeSmile.GraphMesh
 			/// Example result for 1mm grid: Position (-0.5f, 1.2345678f, 0f) => GridPosition (-500, 1234, 0)  
 			/// </summary>
 			/// <returns></returns>
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			public int3 GridPosition() => new(math.round(new double3(Position) * GridUpscale)); // correct rounding requires double!
 
 			/// <summary>
@@ -57,10 +57,10 @@ namespace CodeSmile.GraphMesh
 
 			public override string ToString() => $"Vertex [{Index}] at {Position}, base Edge [{BaseEdgeIndex}]";
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal void Invalidate() => Index = UnsetIndex;
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal static Vertex Create(float3 position, int baseEdgeIndex = UnsetIndex) => new()
 				{ Index = UnsetIndex, BaseEdgeIndex = baseEdgeIndex, Position = position };
 		}
@@ -125,7 +125,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public bool ContainsVertex(int vertexIndex) => vertexIndex == AVertexIndex || vertexIndex == OVertexIndex;
 
 			/// <summary>
@@ -135,7 +135,7 @@ namespace CodeSmile.GraphMesh
 			/// <param name="v0Index"></param>
 			/// <param name="v1Index"></param>
 			/// <returns>True if the two indices are either A's and O's indices or O's and A's indices of the edge.</returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public bool IsConnectingVertices(int v0Index, int v1Index) => v0Index == AVertexIndex && v1Index == OVertexIndex ||
 			                                                              v0Index == OVertexIndex && v1Index == AVertexIndex;
 
@@ -144,7 +144,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="otherEdge"></param>
 			/// <returns></returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public bool IsConnectingVertices(in Edge otherEdge) => IsConnectingVertices(otherEdge.AVertexIndex, otherEdge.OVertexIndex);
 
 			/// <summary>
@@ -154,7 +154,7 @@ namespace CodeSmile.GraphMesh
 			/// <param name="vertexIndex">one of the two vertex indexes of the edge</param>
 			/// <param name="noThrow">If true, will not throw exception if vertexIndex is neither A nor O.</param>
 			/// <returns></returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public int GetOppositeVertexIndex(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex :
 				vertexIndex == OVertexIndex ? AVertexIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
@@ -165,7 +165,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="otherEdge"></param>
 			/// <returns>the vertex index both connect to, or UnsetIndex if they do not connect</returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public int GetConnectingVertexIndex(in Edge otherEdge) =>
 				AVertexIndex == otherEdge.AVertexIndex ? AVertexIndex :
 				AVertexIndex == otherEdge.OVertexIndex ? AVertexIndex : 
@@ -177,7 +177,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public int GetPrevEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? APrevEdgeIndex :
 				vertexIndex == OVertexIndex ? OPrevEdgeIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by {this}");
@@ -187,7 +187,7 @@ namespace CodeSmile.GraphMesh
 			/// </summary>
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public int GetNextEdgeIndex(int vertexIndex) => vertexIndex == AVertexIndex ? ANextEdgeIndex :
 				vertexIndex == OVertexIndex ? ONextEdgeIndex :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by {this}");
@@ -198,7 +198,7 @@ namespace CodeSmile.GraphMesh
 			/// <param name="vertexIndex"></param>
 			/// <returns></returns>
 			/// <exception cref="InvalidOperationException">Thrown if the vertexIndex is not linked to this edge</exception>
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			public (int, int) GetDiskCycleIndices(int vertexIndex) => vertexIndex == AVertexIndex ? (APrevEdgeIndex, ANextEdgeIndex) :
 				vertexIndex == OVertexIndex ? (OPrevEdgeIndex, ONextEdgeIndex) :
 				throw new InvalidOperationException($"Vertex {vertexIndex} is not connected by Edge {Index}");
@@ -210,45 +210,45 @@ namespace CodeSmile.GraphMesh
 
 			[BurstCompile] internal int GetOppositeVertexIndexNoThrow(int vertexIndex) => vertexIndex == AVertexIndex ? OVertexIndex : AVertexIndex;
 
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			internal void SetPrevEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
 				if (vertexIndex == AVertexIndex) APrevEdgeIndex = otherEdgeIndex;
 				else OPrevEdgeIndex = otherEdgeIndex;
 			}
 
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			internal void SetNextEdgeIndex(int vertexIndex, int otherEdgeIndex)
 			{
 				if (vertexIndex == AVertexIndex) ANextEdgeIndex = otherEdgeIndex;
 				else ONextEdgeIndex = otherEdgeIndex;
 			}
 
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			internal void SetDiskCycleIndices(int vertexIndex, int edgeIndex)
 			{
 				SetPrevEdgeIndex(vertexIndex, edgeIndex);
 				SetNextEdgeIndex(vertexIndex, edgeIndex);
 			}
 
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			internal void CopyDiskCycleFrom(int vertexIndex, in Edge sourceEdge)
 			{
 				SetPrevEdgeIndex(vertexIndex, sourceEdge.GetPrevEdgeIndex(vertexIndex));
 				SetNextEdgeIndex(vertexIndex, sourceEdge.GetNextEdgeIndex(vertexIndex));
 			}
 
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			internal void SetOppositeVertexIndex(int oppositeVertexIndex, int newVertexIndex)
 			{
 				if (oppositeVertexIndex == AVertexIndex) OVertexIndex = newVertexIndex;
 				else AVertexIndex = newVertexIndex;
 			}
 
-			[BurstCompile] [MethodImpl(MethodImplOptions.AggressiveInlining)]
+			[BurstCompile] 
 			internal void Invalidate() => Index = UnsetIndex;
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal static Edge Create(int aVertIndex, int oVertIndex, int loopIndex = UnsetIndex,
 				int aPrevEdgeIndex = UnsetIndex, int aNextEdgeIndex = UnsetIndex,
 				int oPrevEdgeIndex = UnsetIndex, int oNextEdgeIndex = UnsetIndex) => new()
@@ -317,13 +317,13 @@ namespace CodeSmile.GraphMesh
 			public override string ToString() => $"Loop [{Index}] of Face [{FaceIndex}], Edge [{EdgeIndex}], Vertex [{StartVertexIndex}], " +
 			                                     $"Cycle <{PrevLoopIndex}°{NextLoopIndex}>, Radial <{PrevRadialLoopIndex}°{NextRadialLoopIndex}>";
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal void SetRadialLoopIndices(int loopIndex) => PrevRadialLoopIndex = NextRadialLoopIndex = loopIndex;
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal void Invalidate() => Index = UnsetIndex;
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal static Loop Create(int faceIndex, int edgeIndex, int vertIndex,
 				int prevRadialLoopIndex, int nextRadialLoopIndex, int prevLoopIndex, int nextLoopIndex) => new()
 			{
@@ -363,10 +363,10 @@ namespace CodeSmile.GraphMesh
 
 			public override string ToString() => $"Face [{Index}] has {ElementCount} verts, first Loop [{FirstLoopIndex}]";
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal void Invalidate() => Index = UnsetIndex;
 			
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			
 			internal static Face Create(int itemCount, int firstLoopIndex = UnsetIndex, int materialIndex = 0) => new()
 				{ Index = UnsetIndex, FirstLoopIndex = firstLoopIndex, ElementCount = itemCount };
 		}

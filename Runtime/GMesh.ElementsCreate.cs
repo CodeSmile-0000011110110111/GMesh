@@ -60,7 +60,7 @@ namespace CodeSmile.GraphMesh
 			return faceIndex;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		private void EnsureValidVertexCollection<T>(in NativeArray<T> vertices) where T : struct
 		{
 			var vertexCount = vertices.Length;
@@ -179,7 +179,7 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="positions"></param>
 		/// <param name="vertexIndices">list of vertex indices - caller is responsible for Dispose()</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public void CreateVertices(in NativeArray<float3> positions, out NativeArray<int> vertexIndices)
 		{
 			var vCount = positions.Length;
@@ -193,7 +193,7 @@ namespace CodeSmile.GraphMesh
 		/// Note: It is up to the caller to set BaseEdgeIndex of the new vertices.
 		/// </summary>
 		/// <param name="positions"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public void CreateVertices(in NativeArray<float3> positions)
 		{
 			var vCount = positions.Length;
@@ -208,10 +208,14 @@ namespace CodeSmile.GraphMesh
 			return job.Schedule();
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		private void CreateFaceInternal_CreateLoops(int faceIndex, in NativeArray<int> vertexIndices, in NativeArray<int> edgeIndices)
 		{
-			// FIXME
+			var vCount = vertexIndices.Length;
+			for (var i = 0; i < vCount; i++)
+				CreateLoopInternal(faceIndex, edgeIndices[i], vertexIndices[i]);
+			
+			/*
 			var job = new CreateLoopsJob
 			{
 				edges = _data._edges, loops = _data._loops, faces = _data._faces, faceIndex = faceIndex, vertexIndices = vertexIndices, edgeIndices = edgeIndices,
@@ -219,6 +223,7 @@ namespace CodeSmile.GraphMesh
 			var vCount = vertexIndices.Length;
 			job.Schedule(vCount, default).Complete();
 			_data.LoopCount += vCount;
+			*/
 		}
 
 		private void CreateLoopInternal(int faceIndex, int edgeIndex, int vertexIndex)

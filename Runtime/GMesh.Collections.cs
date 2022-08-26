@@ -70,63 +70,63 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Vertex GetVertex(int index) => _data.GetVertex(index);
+		 public Vertex GetVertex(int index) => _data.GetVertex(index);
 
 		/// <summary>
 		/// Gets an edge by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Edge GetEdge(int index) => _data.GetEdge(index);
+		 public Edge GetEdge(int index) => _data.GetEdge(index);
 
 		/// <summary>
 		/// Gets a loop by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Loop GetLoop(int index) => _data.GetLoop(index);
+		 public Loop GetLoop(int index) => _data.GetLoop(index);
 
 		/// <summary>
 		/// Gets a face by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public Face GetFace(int index) => _data.GetFace(index);
+		 public Face GetFace(int index) => _data.GetFace(index);
 
 		/// <summary>
 		/// Sets (updates) a vertex in the list using its index.
 		/// </summary>
 		/// <param name="v"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetVertex(in Vertex v) => _data.SetVertex(v);
+		 public void SetVertex(in Vertex v) => _data.SetVertex(v);
 
 		/// <summary>
 		/// Sets (updates) an edge in the list using its index.
 		/// </summary>
 		/// <param name="e"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetEdge(in Edge e) => _data.SetEdge(e);
+		 public void SetEdge(in Edge e) => _data.SetEdge(e);
 
 		/// <summary>
 		/// Sets (updates) a loop in the list using its index.
 		/// </summary>
 		/// <param name="l"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetLoop(in Loop l) => _data.SetLoop(l);
+		 public void SetLoop(in Loop l) => _data.SetLoop(l);
 
 		/// <summary>
 		/// Sets (updates) a face in the list using its index.
 		/// </summary>
 		/// <param name="f"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face f) => _data.SetFace(f);
+		 public void SetFace(in Face f) => _data.SetFace(f);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		internal int AddVertex(ref Vertex vertex) => _data.AddVertex(ref vertex);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		internal int AddEdge(ref Edge edge) => _data.AddEdge(ref edge);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		internal void AddLoop(ref Loop loop) => _data.AddLoop(ref loop);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		internal int AddFace(ref Face face) => _data.AddFace(ref face);
 
 		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);

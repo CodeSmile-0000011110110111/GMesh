@@ -31,7 +31,7 @@ namespace CodeSmile.GraphMesh
 
 			if (totalFaceCount == 0)
 				throw new InvalidOperationException("input meshes do not have a single face");
-			
+
 			var allFaceGridPositions = new int3[totalFaceCount][];
 			var allFaceGridPosIndex = 0;
 
@@ -102,6 +102,22 @@ namespace CodeSmile.GraphMesh
 				DisposeAll(inputMeshes);
 
 			return combinedMesh;
+		}
+
+		/// <summary>
+		/// Calls Dispose() on all non-null meshes in the collection that have not been disposed yet.
+		/// </summary>
+		/// <param name="meshes"></param>
+		private static void DisposeAll(IEnumerable<GMesh> meshes)
+		{
+			if (meshes != null)
+			{
+				foreach (var mesh in meshes)
+				{
+					if (mesh != null && mesh.IsDisposed == false)
+						mesh.Dispose();
+				}
+			}
 		}
 
 		/// <summary>

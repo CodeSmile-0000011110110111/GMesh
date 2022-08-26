@@ -2,7 +2,6 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Collections;
@@ -51,19 +50,19 @@ namespace CodeSmile.GraphMesh
 			/// <summary>
 			/// Number of vertices in the mesh.
 			/// </summary>
-			public int VertexCount { get => _elementCounts[(int)Element.Vertex]; internal set => _elementCounts[(int)Element.Vertex] = value; }
+			public int VertexCount { get => _elementCounts[(int)Element.Vertex]; private set => _elementCounts[(int)Element.Vertex] = value; }
 			/// <summary>
 			/// Number of edges in the mesh.
 			/// </summary>
-			public int EdgeCount { get => _elementCounts[(int)Element.Edge]; internal set => _elementCounts[(int)Element.Edge] = value; }
+			public int EdgeCount { get => _elementCounts[(int)Element.Edge]; private set => _elementCounts[(int)Element.Edge] = value; }
 			/// <summary>
 			/// Number of loops in the mesh.
 			/// </summary>
-			public int LoopCount { get => _elementCounts[(int)Element.Loop]; internal set => _elementCounts[(int)Element.Loop] = value; }
+			public int LoopCount { get => _elementCounts[(int)Element.Loop]; private set => _elementCounts[(int)Element.Loop] = value; }
 			/// <summary>
 			/// Number of faces in the mesh.
 			/// </summary>
-			public int FaceCount { get => _elementCounts[(int)Element.Face]; internal set => _elementCounts[(int)Element.Face] = value; }
+			public int FaceCount { get => _elementCounts[(int)Element.Face]; private set => _elementCounts[(int)Element.Face] = value; }
 
 			/// <summary>
 			/// Check if the GMesh needs disposing. For developers who get easily confused. :)
@@ -107,32 +106,24 @@ namespace CodeSmile.GraphMesh
 				_faces.Dispose();
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void InitializeVerticesWithSize(int initialSize) => _vertices.ResizeUninitialized(initialSize);
-
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void InitializeEdgesWithSize(int initialSize) => _edges.ResizeUninitialized(initialSize);
-
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void InitializeLoopsWithSize(int initialSize) => _loops.ResizeUninitialized(initialSize);
-
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void InitializeFacesWithSize(int initialSize) => _faces.ResizeUninitialized(initialSize);
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextVertexIndex() => _elementCounts[(int)Element.Vertex];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextEdgeIndex() => _elementCounts[(int)Element.Edge];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextLoopIndex() => _elementCounts[(int)Element.Loop];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextFaceIndex() => _elementCounts[(int)Element.Face];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Vertex GetVertex(int index) => _vertices[index];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Edge GetEdge(int index) => _edges[index];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Loop GetLoop(int index) => _loops[index];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Face GetFace(int index) => _faces[index];
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetVertex(in Vertex vertex) => _vertices[vertex.Index] = vertex;
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetEdge(in Edge edge) => _edges[edge.Index] = edge;
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetLoop(in Loop loop) => _loops[loop.Index] = loop;
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public void SetFace(in Face face) => _faces[face.Index] = face;
+			public int GetNextVertexIndex() => _elementCounts[(int)Element.Vertex];
+			public int GetNextEdgeIndex() => _elementCounts[(int)Element.Edge];
+			public int GetNextLoopIndex() => _elementCounts[(int)Element.Loop];
+			public int GetNextFaceIndex() => _elementCounts[(int)Element.Face];
+			public Vertex GetVertex(int index) => _vertices[index];
+			public Edge GetEdge(int index) => _edges[index];
+			public Loop GetLoop(int index) => _loops[index];
+			public Face GetFace(int index) => _faces[index];
+			public void SetVertex(in Vertex vertex) => _vertices[vertex.Index] = vertex;
+			public void SetEdge(in Edge edge) => _edges[edge.Index] = edge;
+			public void SetLoop(in Loop loop) => _loops[loop.Index] = loop;
+			public void SetFace(in Face face) => _faces[face.Index] = face;
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal int AddVertex(ref Vertex vertex)
 			{
 				vertex.Index = GetNextVertexIndex();
@@ -142,7 +133,6 @@ namespace CodeSmile.GraphMesh
 				return vertex.Index;
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal int AddEdge(ref Edge edge)
 			{
 				edge.Index = GetNextEdgeIndex();
@@ -152,7 +142,6 @@ namespace CodeSmile.GraphMesh
 				return edge.Index;
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void AddLoop(ref Loop loop)
 			{
 				loop.Index = GetNextLoopIndex();
@@ -161,7 +150,6 @@ namespace CodeSmile.GraphMesh
 				LoopCount++;
 			}
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal int AddFace(ref Face face)
 			{
 				face.Index = GetNextFaceIndex();
