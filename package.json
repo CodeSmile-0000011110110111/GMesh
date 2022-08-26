@@ -6,7 +6,7 @@
   "category": "Tools",
   "unity": "2020.3",
   "dependencies": {
-    "com.unity.burst": "1.8.0-pre.2",
+    "com.unity.burst": "1.7.4",
     "com.unity.collections": "1.4.0",
     "com.unity.jobs": "0.70.0-preview.7",
     "com.unity.mathematics": "1.2.6"

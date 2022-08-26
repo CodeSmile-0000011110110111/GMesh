@@ -42,7 +42,7 @@ namespace CodeSmile.GraphMesh
 			var transform = new Transform(parameters.Translation, parameters.Rotation, DefaultScale);
 			var job = new CreatePlaneJob
 			{
-				Vertices = _vertices, Edges = _edges, Loops = _loops, Faces = _faces,
+				Data = new GraphData(ref _vertices, ref _edges, ref _loops, ref _faces),
 				PlaneVertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY),
 				Translation = parameters.Translation, Rotation = parameters.Rotation, Scale = float3(parameters.Scale, DefaultScale),
 			};
@@ -52,33 +52,22 @@ namespace CodeSmile.GraphMesh
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 		private struct CreatePlaneJob : IJob
 		{
-			public NativeList<Vertex> Vertices;
-			public NativeList<Edge> Edges;
-			public NativeList<Loop> Loops;
-			public NativeList<Face> Faces;
+			public GraphData Data;
 
 			public int2 PlaneVertexCount;
 			public float3 Translation;
 			public float3 Rotation;
 			public float3 Scale;
 
-			private Vertex GetVertex(int index) => Vertices[index];
-			private void SetVertex(in Vertex vertex) => Vertices[vertex.Index] = vertex;
-			private Edge GetEdge(int index) => Edges[index];
-			private void SetEdge(in Edge edge) => Edges[edge.Index] = edge;
-			private Loop GetLoop(int index) => Loops[index];
-			private void SetLoop(in Loop loop) => Loops[loop.Index] = loop;
-			private Face GetFace(int index) => Faces[index];
-			private void SetFace(in Face face) => Faces[face.Index] = face;
-
 			public void Execute()
 			{
 				// init lists
 				var subdivisions = PlaneVertexCount - 1;
 				var totalVertexCount = PlaneVertexCount.x * PlaneVertexCount.y;
-				Vertices.ResizeUninitialized(totalVertexCount);
-				Faces.ResizeUninitialized(subdivisions.x * subdivisions.y);
-				Loops.ResizeUninitialized(subdivisions.x * subdivisions.y * 4);
+				Data.InitializeVerticesWithSize( totalVertexCount);
+				// TODO: initialize edges with count (shared inner edges vs border edges - there's an algorithm to be found)
+				Data.InitializeFacesWithSize( subdivisions.x * subdivisions.y);
+				Data.InitializeLoopsWithSize( subdivisions.x * subdivisions.y * 4);
 				var vertexCount = 0;
 
 				// create vertices
@@ -87,15 +76,11 @@ namespace CodeSmile.GraphMesh
 				var step = 1f / float3(subdivisions, 1f) * Scale;
 				for (var y = 0; y < PlaneVertexCount.y; y++)
 					for (var x = 0; x < PlaneVertexCount.x; x++)
-					{
-						Vertices[vertexCount] = new Vertex
+						Data.SetVertex(new Vertex
 						{
-							Index = vertexCount, BaseEdgeIndex = UnsetIndex,
+							Index = vertexCount++, BaseEdgeIndex = UnsetIndex,
 							Position = transform(rt, float3(x, y, 0f) * step - centerOffset),
-							//Position = float3(x, y, 0f) * step - centerOffset,
-						};
-						vertexCount++;
-					}
+						});
 
 				// create quad faces
 				var faceIndex = 0;
@@ -132,7 +117,7 @@ namespace CodeSmile.GraphMesh
 						}
 
 						// Create Face
-						Faces[faceIndex] = new Face { Index = faceIndex, FirstLoopIndex = UnsetIndex, ElementCount = 4 };
+						Data.SetFace(new Face { Index = faceIndex, FirstLoopIndex = UnsetIndex, ElementCount = 4 });
 
 						// Create Loops
 						for (var i = 0; i < 4; i++)
@@ -147,7 +132,7 @@ namespace CodeSmile.GraphMesh
 								PrevLoopIndex = prevLoopIdx, NextLoopIndex = nextLoopIdx,
 								PrevRadialLoopIndex = prevRadialIdx, NextRadialLoopIndex = nextRadialIdx,
 							};
-							Loops[loopIndex] = loop;
+							Data.SetLoop(loop);
 							loopIndex++;
 						}
 
@@ -162,17 +147,17 @@ namespace CodeSmile.GraphMesh
 			private int FindExistingEdgeIndex(int v0Index, int v1Index)
 			{
 				// check all edges in cycle, return this edge's index if it points to v1
-				var edgeIndex = GetVertex(v0Index).BaseEdgeIndex;
+				var edgeIndex = Data.GetVertex(v0Index).BaseEdgeIndex;
 				if (edgeIndex == UnsetIndex)
 					return UnsetIndex;
 
-				var edge = GetEdge(edgeIndex);
+				var edge = Data.GetEdge(edgeIndex);
 				do
 				{
 					if (edge.ContainsVertex(v1Index))
 						return edge.Index;
 
-					edge = GetEdge(edge.GetNextEdgeIndex(v0Index));
+					edge = Data.GetEdge(edge.GetNextEdgeIndex(v0Index));
 				} while (edge.Index != edgeIndex);
 
 				return UnsetIndex;
@@ -180,74 +165,74 @@ namespace CodeSmile.GraphMesh
 
 			private int CreateEdge(int v0Index, int v1Index)
 			{
-				var edgeIndex = Edges.Length;
+				var edgeIndex = Data.GetNextEdgeIndex();
 				var edge = new Edge
 				{
 					Index = edgeIndex, BaseLoopIndex = UnsetIndex, AVertexIndex = v0Index, OVertexIndex = v1Index,
 					APrevEdgeIndex = UnsetIndex, ANextEdgeIndex = UnsetIndex, OPrevEdgeIndex = UnsetIndex, ONextEdgeIndex = UnsetIndex,
 				};
-				Edges.Add(edge);
+				Data.AddEdge(edge);
 
 				// Disk Cycle Vertex 0
 				{
-					var v0 = GetVertex(v0Index);
+					var v0 = Data.GetVertex(v0Index);
 					if (Hint.Likely(v0.BaseEdgeIndex == UnsetIndex))
 					{
 						v0.BaseEdgeIndex = edge.APrevEdgeIndex = edge.ANextEdgeIndex = edgeIndex;
-						SetVertex(v0);
+						Data.SetVertex(v0);
 					}
 					else
 					{
-						var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
+						var v0BaseEdge = Data.GetEdge(v0.BaseEdgeIndex);
 						edge.APrevEdgeIndex = v0.BaseEdgeIndex;
 						edge.ANextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
 
-						var v0PrevEdge = GetEdge(edge.APrevEdgeIndex);
+						var v0PrevEdge = Data.GetEdge(edge.APrevEdgeIndex);
 						v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
-						SetEdge(v0PrevEdge);
+						Data.SetEdge(v0PrevEdge);
 
-						var v0NextEdge = GetEdge(edge.ANextEdgeIndex);
+						var v0NextEdge = Data.GetEdge(edge.ANextEdgeIndex);
 						v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
-						SetEdge(v0NextEdge);
+						Data.SetEdge(v0NextEdge);
 
 						// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
 						// This occurs when v0 and v1 were the first vertices to be connected with an edge.
-						var prevEdgeVertex0 = GetVertex(v0BaseEdge.AVertexIndex);
+						var prevEdgeVertex0 = Data.GetVertex(v0BaseEdge.AVertexIndex);
 						if (Hint.Unlikely(prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex))
 						{
 							v0.BaseEdgeIndex = edgeIndex;
-							SetVertex(v0);
+							Data.SetVertex(v0);
 						}
 					}
 				}
 
 				// Disk Cycle Vertex 1
 				{
-					var v1 = GetVertex(v1Index);
+					var v1 = Data.GetVertex(v1Index);
 					if (Hint.Unlikely(v1.BaseEdgeIndex == UnsetIndex))
 					{
 						// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
 						// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
 						v1.BaseEdgeIndex = edge.OPrevEdgeIndex = edge.ONextEdgeIndex = edgeIndex;
-						SetVertex(v1);
+						Data.SetVertex(v1);
 					}
 					else
 					{
-						var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
+						var v1BaseEdge = Data.GetEdge(v1.BaseEdgeIndex);
 						edge.OPrevEdgeIndex = v1.BaseEdgeIndex;
 						edge.ONextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
 
-						var v1PrevEdge = GetEdge(edge.OPrevEdgeIndex);
+						var v1PrevEdge = Data.GetEdge(edge.OPrevEdgeIndex);
 						v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
-						SetEdge(v1PrevEdge);
+						Data.SetEdge(v1PrevEdge);
 
-						var v1NextEdge = GetEdge(edge.ONextEdgeIndex);
+						var v1NextEdge = Data.GetEdge(edge.ONextEdgeIndex);
 						v1NextEdge.SetPrevEdgeIndex(v1Index, edgeIndex);
-						SetEdge(v1NextEdge);
+						Data.SetEdge(v1NextEdge);
 					}
 				}
 
-				Edges[edgeIndex] = edge;
+				Data.SetEdge(edge);
 				return edgeIndex;
 			}
 
@@ -256,12 +241,12 @@ namespace CodeSmile.GraphMesh
 				var prevRadialLoopIndex = newLoopIndex;
 				var nextRadialLoopIndex = newLoopIndex;
 
-				var edge = GetEdge(edgeIndex);
+				var edge = Data.GetEdge(edgeIndex);
 				if (Hint.Unlikely(edge.BaseLoopIndex == UnsetIndex))
 					edge.BaseLoopIndex = newLoopIndex;
 				else
 				{
-					var edgeBaseLoop = GetLoop(edge.BaseLoopIndex);
+					var edgeBaseLoop = Data.GetLoop(edge.BaseLoopIndex);
 					prevRadialLoopIndex = edgeBaseLoop.Index;
 					nextRadialLoopIndex = edgeBaseLoop.NextRadialLoopIndex;
 
@@ -269,16 +254,16 @@ namespace CodeSmile.GraphMesh
 						edgeBaseLoop.PrevRadialLoopIndex = newLoopIndex;
 					else
 					{
-						var nextRadialLoop = GetLoop(edgeBaseLoop.NextRadialLoopIndex);
+						var nextRadialLoop = Data.GetLoop(edgeBaseLoop.NextRadialLoopIndex);
 						nextRadialLoop.PrevRadialLoopIndex = newLoopIndex;
-						SetLoop(nextRadialLoop);
+						Data.SetLoop(nextRadialLoop);
 					}
 
 					edgeBaseLoop.NextRadialLoopIndex = newLoopIndex;
-					SetLoop(edgeBaseLoop);
+					Data.SetLoop(edgeBaseLoop);
 				}
 
-				SetEdge(edge);
+				Data.SetEdge(edge);
 
 				return (prevRadialLoopIndex, nextRadialLoopIndex);
 			}
@@ -288,29 +273,29 @@ namespace CodeSmile.GraphMesh
 				var prevLoopIndex = newLoopIndex;
 				var nextLoopIndex = newLoopIndex;
 
-				var face = GetFace(faceIndex);
+				var face = Data.GetFace(faceIndex);
 				if (Hint.Unlikely(face.FirstLoopIndex == UnsetIndex))
 				{
 					face.FirstLoopIndex = newLoopIndex;
-					SetFace(face);
+					Data.SetFace(face);
 				}
 				else
 				{
-					var firstLoop = GetLoop(face.FirstLoopIndex);
+					var firstLoop = Data.GetLoop(face.FirstLoopIndex);
 					nextLoopIndex = firstLoop.Index;
 					prevLoopIndex = firstLoop.PrevLoopIndex;
 
-					var prevLoop = GetLoop(prevLoopIndex);
+					var prevLoop = Data.GetLoop(prevLoopIndex);
 					prevLoop.NextLoopIndex = newLoopIndex;
 
 					// update nextLoop or re-assign it as firstLoop, depends on whether they are the same
 					if (Hint.Likely(prevLoopIndex != nextLoopIndex))
-						SetLoop(prevLoop);
+						Data.SetLoop(prevLoop);
 					else
 						firstLoop = prevLoop;
 
 					firstLoop.PrevLoopIndex = newLoopIndex;
-					SetLoop(firstLoop);
+					Data.SetLoop(firstLoop);
 				}
 
 				return (prevLoopIndex, nextLoopIndex);

@@ -53,7 +53,7 @@ namespace CodeSmile.GraphMesh
 					var currentVertex = (uint)0;
 					var abDirNormal = float3.zero;
 					var acDirNormal = float3.zero;
-					var vertCount = 0;
+					//var vertCount = 0;
 
 					
 						// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
