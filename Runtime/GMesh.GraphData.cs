@@ -119,10 +119,10 @@ namespace CodeSmile.GraphMesh
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			public void InitializeFacesWithSize(int initialSize) => _faces.ResizeUninitialized(initialSize);
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextVertexIndex() => _vertices.Length;
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextEdgeIndex() => _edges.Length;
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextLoopIndex() => _loops.Length;
-			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextFaceIndex() => _faces.Length;
+			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextVertexIndex() => _elementCounts[(int)Element.Vertex];
+			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextEdgeIndex() => _elementCounts[(int)Element.Edge];
+			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextLoopIndex() => _elementCounts[(int)Element.Loop];
+			[MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetNextFaceIndex() => _elementCounts[(int)Element.Face];
 			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Vertex GetVertex(int index) => _vertices[index];
 			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Edge GetEdge(int index) => _edges[index];
 			[MethodImpl(MethodImplOptions.AggressiveInlining)] public Loop GetLoop(int index) => _loops[index];
@@ -135,8 +135,9 @@ namespace CodeSmile.GraphMesh
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal int AddVertex(ref Vertex vertex)
 			{
-				vertex.Index = _vertices.Length;
-				_vertices.Add(vertex);
+				vertex.Index = GetNextVertexIndex();
+				if (vertex.Index < _vertices.Length) SetVertex(vertex);
+				else _vertices.Add(vertex);
 				VertexCount++;
 				return vertex.Index;
 			}
@@ -144,8 +145,9 @@ namespace CodeSmile.GraphMesh
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal int AddEdge(ref Edge edge)
 			{
-				edge.Index = _edges.Length;
-				_edges.Add(edge);
+				edge.Index = GetNextEdgeIndex();
+				if (edge.Index < _edges.Length) SetEdge(edge);
+				else _edges.Add(edge);
 				EdgeCount++;
 				return edge.Index;
 			}
@@ -153,16 +155,18 @@ namespace CodeSmile.GraphMesh
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal void AddLoop(ref Loop loop)
 			{
-				loop.Index = _loops.Length;
-				_loops.Add(loop);
+				loop.Index = GetNextLoopIndex();
+				if (loop.Index < _loops.Length) SetLoop(loop);
+				else _loops.Add(loop);
 				LoopCount++;
 			}
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal int AddFace(ref Face face)
 			{
-				face.Index = _faces.Length;
-				_faces.Add(face);
+				face.Index = GetNextFaceIndex();
+				if (face.Index < _faces.Length) SetFace(face);
+				else _faces.Add(face);
 				FaceCount++;
 				return face.Index;
 			}

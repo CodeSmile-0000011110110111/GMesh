@@ -53,28 +53,26 @@ namespace CodeSmile.GraphMesh
 			{
 				// init lists
 				var subdivisions = PlaneVertexCount - 1;
-				var totalVertexCount = PlaneVertexCount.x * PlaneVertexCount.y;
-				Data.InitializeVerticesWithSize(totalVertexCount);
+				Data.InitializeVerticesWithSize(PlaneVertexCount.x * PlaneVertexCount.y);
 				// TODO: initialize edges with count (shared inner edges vs border edges - there's an algorithm to be found)
 				Data.InitializeFacesWithSize(subdivisions.x * subdivisions.y);
 				Data.InitializeLoopsWithSize(subdivisions.x * subdivisions.y * 4);
-				var vertexCount = 0;
 
 				// create vertices
-				var rt = new RigidTransform(quaternion.Euler(radians(Rotation)), Translation);
-				var centerOffset = float3(.5f, .5f, 0f) * Scale;
-				var step = 1f / float3(subdivisions, 1f) * Scale;
-				for (var y = 0; y < PlaneVertexCount.y; y++)
-					for (var x = 0; x < PlaneVertexCount.x; x++)
-						Data.SetVertex(new Vertex
+				{
+					var rt = new RigidTransform(quaternion.Euler(radians(Rotation)), Translation);
+					var centerOffset = float3(.5f, .5f, 0f) * Scale;
+					var step = 1f / float3(subdivisions, 1f) * Scale;
+					for (var y = 0; y < PlaneVertexCount.y; y++)
+						for (var x = 0; x < PlaneVertexCount.x; x++)
 						{
-							Index = vertexCount++, BaseEdgeIndex = UnsetIndex,
-							Position = transform(rt, float3(x, y, 0f) * step - centerOffset),
-						});
+							var pos = transform(rt, float3(x, y, 0f) * step - centerOffset);
+							var vertex = new Vertex { BaseEdgeIndex = UnsetIndex, Position = pos };
+							Data.AddVertex(ref vertex);
+						}
+				}
 
 				// create quad faces
-				var faceIndex = 0;
-				var loopIndex = 0;
 				var fvIndices = new NativeArray<int>(4, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 				var edgeIndices = new NativeArray<int>(4, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 				for (var y = 0; y < subdivisions.y; y++)
@@ -85,14 +83,10 @@ namespace CodeSmile.GraphMesh
 						// +z axis points towards the plane and plane normal is Vector3.back = (0,0,-1)
 
 						// calculate quad's vertex indices
-						var vi0 = y * PlaneVertexCount.x + x;
-						var vi1 = (y + 1) * PlaneVertexCount.x + x;
-						var vi2 = (y + 1) * PlaneVertexCount.x + x + 1;
-						var vi3 = y * PlaneVertexCount.x + x + 1;
-						fvIndices[0] = vi0;
-						fvIndices[1] = vi1;
-						fvIndices[2] = vi2;
-						fvIndices[3] = vi3;
+						fvIndices[0] = y * PlaneVertexCount.x + x;
+						fvIndices[1] = (y + 1) * PlaneVertexCount.x + x;
+						fvIndices[2] = (y + 1) * PlaneVertexCount.x + x + 1;
+						fvIndices[3] = y * PlaneVertexCount.x + x + 1;
 
 						// Create Edges
 						{
@@ -107,36 +101,30 @@ namespace CodeSmile.GraphMesh
 						}
 
 						// Create Face
-						Data.SetFace(new Face { Index = faceIndex, FirstLoopIndex = UnsetIndex, ElementCount = 4 });
+						var face = new Face { FirstLoopIndex = UnsetIndex, ElementCount = 4 };
+						var faceIndex = Data.AddFace(ref face);
 
 						// Create Loops
 						for (var i = 0; i < 4; i++)
 						{
 							var edgeIndex = edgeIndices[i];
 							var vertexIndex = fvIndices[i];
+							var loopIndex = Data.GetNextLoopIndex();
 							var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(loopIndex, edgeIndex);
 							var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(loopIndex, faceIndex);
 							var loop = new Loop
 							{
-								Index = loopIndex, FaceIndex = faceIndex, EdgeIndex = edgeIndex, StartVertexIndex = vertexIndex,
+								FaceIndex = faceIndex, EdgeIndex = edgeIndex, StartVertexIndex = vertexIndex,
 								PrevLoopIndex = prevLoopIdx, NextLoopIndex = nextLoopIdx,
 								PrevRadialLoopIndex = prevRadialIdx, NextRadialLoopIndex = nextRadialIdx,
 							};
-							Data.SetLoop(loop);
-							loopIndex++;
+							Data.AddLoop(ref loop);
 						}
-
-						faceIndex++;
 					}
 				}
 
 				edgeIndices.Dispose();
 				fvIndices.Dispose();
-
-				Data.VertexCount = Data.Vertices.Length;
-				Data.EdgeCount = Data.Edges.Length;
-				Data.LoopCount = Data.Loops.Length;
-				Data.FaceCount = Data.Faces.Length;
 			}
 
 			private int FindExistingEdgeIndex(int v0Index, int v1Index)

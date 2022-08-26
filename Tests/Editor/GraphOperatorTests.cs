@@ -16,9 +16,9 @@ public class GraphOperatorTests
 		using (var gMesh = GMesh.Plane(new GMeshPlane(new int2(3))))
 		{
 			Validate.AllElementsAndRelations(gMesh);
-			Assert.AreEqual(4, gMesh.CalculateEdgeCount(4));
-			Assert.AreEqual(3, gMesh.CalculateEdgeCount(1));
-			Assert.AreEqual(2, gMesh.CalculateEdgeCount(2));
+			Assert.AreEqual(4, gMesh.CalculateEdgeCount(4), "edge count v4");
+			Assert.AreEqual(3, gMesh.CalculateEdgeCount(1), "edge count v1");
+			Assert.AreEqual(2, gMesh.CalculateEdgeCount(2), "edge count v2");
 
 			// create edge for insert testing
 			// vertex 4 is in the center (4 edges in cycle)

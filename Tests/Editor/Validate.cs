@@ -246,28 +246,28 @@ public static class Validate
 		{
 			var vertex = gMesh.GetVertex(i);
 			if (vertex.IsValid)
-				Assert.AreEqual(i, vertex.Index);
+				Assert.AreEqual(i, vertex.Index, "vertex index");
 		}
 
 		for (var i = 0; i < gMesh.EdgeCount; i++)
 		{
 			var edge = gMesh.GetEdge(i);
 			if (edge.IsValid)
-				Assert.AreEqual(i, edge.Index);
+				Assert.AreEqual(i, edge.Index, "edge index");
 		}
 
 		for (var i = 0; i < gMesh.LoopCount; i++)
 		{
 			var loop = gMesh.GetLoop(i);
 			if (loop.IsValid)
-				Assert.AreEqual(i, loop.Index);
+				Assert.AreEqual(i, loop.Index, "loop index");
 		}
 
 		for (var i = 0; i < gMesh.FaceCount; i++)
 		{
 			var face = gMesh.GetFace(i);
 			if (face.IsValid)
-				Assert.AreEqual(i, face.Index);
+				Assert.AreEqual(i, face.Index, "face index");
 		}
 	}
 
