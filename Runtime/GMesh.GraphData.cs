@@ -23,12 +23,12 @@ namespace CodeSmile.GraphMesh
 				Count = 4,
 			}
 
-			// FIXME: make private !
-			internal NativeArray<int> _elementCounts;
+			private NativeArray<int> _elementCounts;
+			// FIXME: make private
 			internal NativeList<Vertex> _vertices;
 			internal NativeList<Edge> _edges;
-			internal NativeList<Loop> _loops;
-			internal NativeList<Face> _faces;
+			private NativeList<Loop> _loops;
+			private NativeList<Face> _faces;
 
 			/// <summary>
 			/// The read-only collection of vertices.

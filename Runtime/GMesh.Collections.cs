@@ -1,7 +1,6 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using System.Runtime.CompilerServices;
 using Unity.Collections;
 using UnityEngine;
 
@@ -70,63 +69,56 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		 public Vertex GetVertex(int index) => _data.GetVertex(index);
+		public Vertex GetVertex(int index) => _data.GetVertex(index);
 
 		/// <summary>
 		/// Gets an edge by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		 public Edge GetEdge(int index) => _data.GetEdge(index);
+		public Edge GetEdge(int index) => _data.GetEdge(index);
 
 		/// <summary>
 		/// Gets a loop by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		 public Loop GetLoop(int index) => _data.GetLoop(index);
+		public Loop GetLoop(int index) => _data.GetLoop(index);
 
 		/// <summary>
 		/// Gets a face by its index.
 		/// </summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		 public Face GetFace(int index) => _data.GetFace(index);
+		public Face GetFace(int index) => _data.GetFace(index);
 
 		/// <summary>
 		/// Sets (updates) a vertex in the list using its index.
 		/// </summary>
 		/// <param name="v"></param>
-		 public void SetVertex(in Vertex v) => _data.SetVertex(v);
+		public void SetVertex(in Vertex v) => _data.SetVertex(v);
 
 		/// <summary>
 		/// Sets (updates) an edge in the list using its index.
 		/// </summary>
 		/// <param name="e"></param>
-		 public void SetEdge(in Edge e) => _data.SetEdge(e);
+		public void SetEdge(in Edge e) => _data.SetEdge(e);
 
 		/// <summary>
 		/// Sets (updates) a loop in the list using its index.
 		/// </summary>
 		/// <param name="l"></param>
-		 public void SetLoop(in Loop l) => _data.SetLoop(l);
+		public void SetLoop(in Loop l) => _data.SetLoop(l);
 
 		/// <summary>
 		/// Sets (updates) a face in the list using its index.
 		/// </summary>
 		/// <param name="f"></param>
-		 public void SetFace(in Face f) => _data.SetFace(f);
+		public void SetFace(in Face f) => _data.SetFace(f);
 
-		
 		internal int AddVertex(ref Vertex vertex) => _data.AddVertex(ref vertex);
-
-		
 		internal int AddEdge(ref Edge edge) => _data.AddEdge(ref edge);
-
-		
 		internal void AddLoop(ref Loop loop) => _data.AddLoop(ref loop);
-
-		
 		internal int AddFace(ref Face face) => _data.AddFace(ref face);
 
 		//private void RemoveVertex(int index) => _vertices.RemoveAt(index);
@@ -147,7 +139,6 @@ namespace CodeSmile.GraphMesh
 			// TODO: we'll just leave the deleted elements as is for now
 			// perhaps we'll simply re-use them when adding new elements?
 
-			// in order of causing least amount of overhead
 			//RemoveInvalidatedVertices();
 			//RemoveInvalidatedEdges();
 			//RemoveInvalidatedLoops();

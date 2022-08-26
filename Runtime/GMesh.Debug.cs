@@ -243,14 +243,14 @@ namespace CodeSmile.GraphMesh
 
 					Handles.DrawBezier(mainEdgeV0, mainEdgeV1, mainEdgeV0, mainEdgeV1, lineColor, null, lineThickness);
 
-					var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
-					var toV0Next = mainEdgeV0 + (math.transform(t, CalculateCenter(v0NextEdge) * scale) - mainEdgeV0) * edgeCutOff;
+					var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
+					var toV0Next = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0NextEdge) * scale) - mainEdgeV0) * edgeCutOff;
 					Handles.DrawBezier(mainEdgeV0, toV0Prev, mainEdgeV0, toV0Prev, lineColor, null, lineThickness);
 					if (e.APrevEdgeIndex != e.ANextEdgeIndex)
 						Handles.DrawBezier(mainEdgeV0, toV0Next, mainEdgeV0, toV0Next, lineColor, null, lineThickness);
 
-					var toV1Prev = mainEdgeV1 + (math.transform(t, CalculateCenter(v1PrevEdge) * scale) - mainEdgeV1) * edgeCutOff;
-					var toV1Next = mainEdgeV1 + (math.transform(t, CalculateCenter(v1NextEdge) * scale) - mainEdgeV1) * edgeCutOff;
+					var toV1Prev = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1PrevEdge) * scale) - mainEdgeV1) * edgeCutOff;
+					var toV1Next = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1NextEdge) * scale) - mainEdgeV1) * edgeCutOff;
 					Handles.DrawBezier(mainEdgeV1, toV1Prev, mainEdgeV1, toV1Prev, lineColor, null, lineThickness);
 					if (e.OPrevEdgeIndex != e.ONextEdgeIndex)
 						Handles.DrawBezier(mainEdgeV1, toV1Next, mainEdgeV1, toV1Next, lineColor, null, lineThickness);
@@ -315,7 +315,7 @@ namespace CodeSmile.GraphMesh
 					if (f.IsValid == false)
 						continue;
 
-					var centroid = math.transform(t, CalculateCentroid(f) * scale);
+					var centroid = math.transform(t, CalculateFaceCentroid(f) * scale);
 
 					if (highlightErrors && ValidateFaceLoopCycle(f, out var issue) == false)
 					{
@@ -417,7 +417,7 @@ namespace CodeSmile.GraphMesh
 					if (f.IsValid == false)
 						continue;
 
-					var centroid = math.transform(t, CalculateCentroid(f) * scale);
+					var centroid = math.transform(t, CalculateFaceCentroid(f) * scale);
 
 					ForEachLoop(f, l =>
 					{
@@ -478,7 +478,7 @@ namespace CodeSmile.GraphMesh
 					if (f.IsValid == false)
 						continue;
 
-					var centroid = math.transform(t, CalculateCentroid(f) * scale);
+					var centroid = math.transform(t, CalculateFaceCentroid(f) * scale);
 					var firstLoop = GetLoop(f.FirstLoopIndex);
 					var vertex = math.transform(t, GetVertex(firstLoop.StartVertexIndex).Position * scale);
 

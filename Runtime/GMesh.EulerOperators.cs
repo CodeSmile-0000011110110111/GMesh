@@ -22,7 +22,7 @@ namespace CodeSmile.GraphMesh
 		/// <param name="splitEdge"></param>
 		/// <returns>the index of the new edge</returns>
 		public int SplitEdgeAndCreateVertex(ref Edge splitEdge) =>
-			SplitEdgeAndCreateVertex(ref splitEdge, CalculateCenter(splitEdge));
+			SplitEdgeAndCreateVertex(ref splitEdge, CalculateEdgeCenter(splitEdge));
 
 		/// <summary>
 		/// Splits an edge by inserting a vertex at the given position. Updates face loops.
