@@ -54,10 +54,10 @@ namespace CodeSmile.GraphMesh
 				// init lists
 				var subdivisions = PlaneVertexCount - 1;
 				var totalVertexCount = PlaneVertexCount.x * PlaneVertexCount.y;
-				Data.InitializeVerticesWithSize( totalVertexCount);
+				Data.InitializeVerticesWithSize(totalVertexCount);
 				// TODO: initialize edges with count (shared inner edges vs border edges - there's an algorithm to be found)
-				Data.InitializeFacesWithSize( subdivisions.x * subdivisions.y);
-				Data.InitializeLoopsWithSize( subdivisions.x * subdivisions.y * 4);
+				Data.InitializeFacesWithSize(subdivisions.x * subdivisions.y);
+				Data.InitializeLoopsWithSize(subdivisions.x * subdivisions.y * 4);
 				var vertexCount = 0;
 
 				// create vertices
@@ -100,10 +100,10 @@ namespace CodeSmile.GraphMesh
 							var eIndex1 = FindExistingEdgeIndex(fvIndices[1], fvIndices[2]);
 							var eIndex2 = FindExistingEdgeIndex(fvIndices[2], fvIndices[3]);
 							var eIndex3 = FindExistingEdgeIndex(fvIndices[3], fvIndices[0]);
-							edgeIndices[0] = select(CreateEdge(fvIndices[0], fvIndices[1]), eIndex0, eIndex0 != UnsetIndex);
-							edgeIndices[1] = select(CreateEdge(fvIndices[1], fvIndices[2]), eIndex1, eIndex1 != UnsetIndex);
-							edgeIndices[2] = select(CreateEdge(fvIndices[2], fvIndices[3]), eIndex2, eIndex2 != UnsetIndex);
-							edgeIndices[3] = select(CreateEdge(fvIndices[3], fvIndices[0]), eIndex3, eIndex3 != UnsetIndex);
+							edgeIndices[0] = eIndex0 != UnsetIndex ? eIndex0 : CreateEdge(fvIndices[0], fvIndices[1]);
+							edgeIndices[1] = eIndex1 != UnsetIndex ? eIndex1 : CreateEdge(fvIndices[1], fvIndices[2]);
+							edgeIndices[2] = eIndex2 != UnsetIndex ? eIndex2 : CreateEdge(fvIndices[2], fvIndices[3]);
+							edgeIndices[3] = eIndex3 != UnsetIndex ? eIndex3 : CreateEdge(fvIndices[3], fvIndices[0]);
 						}
 
 						// Create Face
