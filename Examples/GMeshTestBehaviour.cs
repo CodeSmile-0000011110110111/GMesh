@@ -25,7 +25,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 
 	[Header("Debug")]
 	public bool _logToConsole;
-	public GMesh.DebugDrawElements _debugDrawElements = 0;
+	public GMesh.DebugDraw _debugDraw = 0;
 
 	private int _prevTriangulationApproach;
 	private int _prevVertexCount;
@@ -50,7 +50,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 		if (_gMesh == null)
 			return;
 
-		_gMesh.DebugDrawGizmos(transform, _debugDrawElements);
+		_gMesh.DebugDrawGizmos(transform, _debugDraw);
 	}
 
 	private void OnValidate()

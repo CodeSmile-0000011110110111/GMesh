@@ -12,7 +12,6 @@ namespace CodeSmile.GraphMesh
 	public sealed partial class GMesh
 	{
 		private Calculate _calculate;
-		private Count _count;
 
 		/// <summary>
 		/// Calculates vertices for an n-gon with the given number of vertices and scale where vertices go in clockwise order around
@@ -23,39 +22,86 @@ namespace CodeSmile.GraphMesh
 		/// <param name="vertices">Returned NativeArray of vertices, caller is responsible for disposing this array.</param>
 		/// <param name="allocator">The allocator to use for the returned vertices array. Defaults to TempJob.</param>
 		public static void CalculateRadialPolygonVertices(int vertexCount, float scale, out NativeArray<float3> vertices,
-			Allocator allocator = Allocator.TempJob)
-		{
-			if (vertexCount < 2)
-				throw new ArgumentException("polygon requires at least 3 vertices");
-
-			vertices = new NativeArray<float3>(vertexCount, allocator, NativeArrayOptions.UninitializedMemory);
-			for (var i = 0; i < vertexCount; i++)
-				vertices[i] = Calculate.RadialVertexPosition(i, vertexCount, scale);
-		}
+			Allocator allocator = Allocator.TempJob) => Calculate.RadialPolygonVertices(vertexCount, scale, out vertices, allocator);
 
 		/// <summary>
-		/// Calculates the mesh centroid (average position of all vertices).
-		/// Equals sum of all vertex positions divided by number of vertices. 
+		/// Calculates center position between the two positions.
+		/// </summary>
+		/// <param name="pos0"></param>
+		/// <param name="pos1"></param>
+		/// <returns></returns>
+		public static float3 CalculateCenter(float3 pos0, float3 pos1) => Calculate.Center(pos0, pos1);
+
+		/// <summary>
+		/// Calculates the mesh centroid => average position of all vertices divided by number of vertices.
 		/// </summary>
 		/// <returns></returns>
-		public float3 CalculateCentroid() => _calculate.Centroid(_data);
+		public float3 CalculateCentroid() => Calculate.Centroid(_data);
 
-		public float3 CalculateFaceCentroid(int faceIndex) => CalculateFaceCentroid(GetFace(faceIndex));
-		public float3 CalculateFaceCentroid(in Face face) => _calculate.Centroid(_data, face);
+		/// <summary>
+		/// Calculates the face (polygon) centroid => average position of all face vertices divided by number of vertices.
+		/// </summary>
+		/// <param name="faceIndex"></param>
+		/// <returns></returns>
+		public float3 CalculateFaceCentroid(int faceIndex) => Calculate.Centroid(_data, GetFace(faceIndex));
 
+		/// <summary>
+		/// Calculates the face (polygon) centroid => average position of all face vertices divided by number of vertices.
+		/// </summary>
+		/// <param name="face"></param>
+		/// <returns></returns>
+		public float3 CalculateFaceCentroid(in Face face) => Calculate.Centroid(_data, face);
+
+		/// <summary>
+		/// Calculates the center position of the edge.
+		/// </summary>
+		/// <param name="edgeIndex"></param>
+		/// <returns></returns>
 		public float3 CalculateEdgeCenter(int edgeIndex) => CalculateEdgeCenter(GetEdge(edgeIndex));
-		public float3 CalculateEdgeCenter(in Edge edge) => CalculateCenter(edge.AVertexIndex, edge.OVertexIndex);
-		public float3 CalculateCenter(int vertex0Index, int vertex1Index) => CalculateCenter(GetVertex(vertex0Index), GetVertex(vertex1Index));
-		public float3 CalculateCenter(in Vertex v0, in Vertex v1) => CalculateCenter(v0.Position, v1.Position);
-		public float3 CalculateCenter(float3 pos0, float3 pos1) => Calculate.Center(pos0, pos1);
 
-		public int CalculateEdgeCount(int vertexIndex) => CalculateEdgeCount(GetVertex(vertexIndex));
-		public int CalculateEdgeCount(in Vertex vertex) => _count.DiskCycleEdges(_data, vertex);
+		/// <summary>
+		/// Calculates the center position of the edge.
+		/// </summary>
+		/// <param name="edge"></param>
+		/// <returns></returns>
+		public float3 CalculateEdgeCenter(in Edge edge) =>
+			CalculateCenter(GetVertex(edge.AVertexIndex).Position, GetVertex(edge.OVertexIndex).Position);
+
+		/// <summary>
+		/// Calculates the center position between the two vertices.
+		/// </summary>
+		/// <param name="vertex0Index"></param>
+		/// <param name="vertex1Index"></param>
+		/// <returns></returns>
+		public float3 CalculateVertexCenter(int vertex0Index, int vertex1Index) =>
+			CalculateCenter(GetVertex(vertex0Index).Position, GetVertex(vertex1Index).Position);
+
+		/// <summary>
+		/// Calculates the center position between the two vertices.
+		/// </summary>
+		/// <param name="vertex0"></param>
+		/// <param name="vertex1"></param>
+		/// <returns></returns>
+		public float3 CalculateVertexCenter(in Vertex vertex0, in Vertex vertex1) => CalculateCenter(vertex0.Position, vertex1.Position);
+
+		/// <summary>
+		/// Calculates the number of edges in the disk cycle of the vertex.
+		/// </summary>
+		/// <param name="vertexIndex"></param>
+		/// <returns></returns>
+		public int CalculateEdgeCount(int vertexIndex) => Calculate.DiskCycleEdgeCount(_data, GetVertex(vertexIndex));
+
+		/// <summary>
+		/// Calculates the number of edges in the disk cycle of the vertex.
+		/// </summary>
+		/// <param name="vertex"></param>
+		/// <returns></returns>
+		public int CalculateEdgeCount(in Vertex vertex) => Calculate.DiskCycleEdgeCount(_data, vertex);
 
 		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-		internal struct Calculate
+		internal readonly struct Calculate
 		{
-			public float3 Centroid(in GraphData data)
+			public static float3 Centroid(in GraphData data)
 			{
 				// TODO: implement using jobs
 				var sum = float3.zero;
@@ -68,7 +114,7 @@ namespace CodeSmile.GraphMesh
 				return sum / data.VertexCount;
 			}
 
-			public float3 Centroid(in GraphData data, in Face face)
+			public static float3 Centroid(in GraphData data, in Face face)
 			{
 #if GMESH_VALIDATION
 				if (face.IsValid == false)
@@ -96,12 +142,19 @@ namespace CodeSmile.GraphMesh
 				var angle = vertexNumber * 2f * math.PI / vertexCount;
 				return new float3(math.sin(angle) * scale, 0f, math.cos(angle) * scale);
 			}
-		}
 
-		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-		internal struct Count
-		{
-			public int DiskCycleEdges(in GraphData data, in Vertex vertex)
+			public static void RadialPolygonVertices(int vertexCount, float scale, out NativeArray<float3> vertices,
+				Allocator allocator = Allocator.TempJob)
+			{
+				if (vertexCount <= 2)
+					throw new ArgumentException("polygon requires at least 3 vertices");
+
+				vertices = new NativeArray<float3>(vertexCount, allocator, NativeArrayOptions.UninitializedMemory);
+				for (var i = 0; i < vertexCount; i++)
+					vertices[i] = RadialVertexPosition(i, vertexCount, scale);
+			}
+
+			public static int DiskCycleEdgeCount(in GraphData data, in Vertex vertex)
 			{
 #if GMESH_VALIDATION
 				if (vertex.IsValid == false)

@@ -11,18 +11,18 @@ namespace CodeSmile.GraphMesh
 	public sealed partial class GMesh
 	{
 		[Flags]
-		public enum DebugDrawElements
+		public enum DebugDraw
 		{
 			Vertices = 1 << 0,
 			Edges = 1 << 1,
 			EdgeCycles = 1 << 2,
 			Loops = 1 << 3,
-			LoopsDrawWinding = 1 << 4,
-			LoopsDrawRelations = 1 << 5,
+			LoopsWithWinding = 1 << 4,
+			LoopsWithRelations = 1 << 5,
 			LoopCycles = 1 << 6,
 			Faces = 1 << 7,
 
-			DrawIndices = 1 << 8,
+			IndexLabels = 1 << 8,
 			HighlightGraphErrors = 1 << 9,
 
 			Default = Vertices | Edges | Faces,
@@ -57,7 +57,7 @@ namespace CodeSmile.GraphMesh
 			}
 		}
 
-		public void DebugDrawGizmos(UnityEngine.Transform transform, DebugDrawElements drawElements = DebugDrawElements.Default)
+		public void DebugDrawGizmos(UnityEngine.Transform transform, DebugDraw debugDraw = DebugDraw.Default)
 		{
 			var vertColor = Color.cyan;
 			var edgeColor = Color.yellow;
@@ -70,29 +70,29 @@ namespace CodeSmile.GraphMesh
 			textStyle.normal.textColor = vertColor;
 			textStyle.fontSize = 12;
 
-			var highlightErrors = drawElements.HasFlag(DebugDrawElements.HighlightGraphErrors);
+			var highlightErrors = debugDraw.HasFlag(DebugDraw.HighlightGraphErrors);
 
-			var drawIndices = drawElements.HasFlag(DebugDrawElements.DrawIndices);
-			if (drawElements.HasFlag(DebugDrawElements.Vertices))
+			var drawIndices = debugDraw.HasFlag(DebugDraw.IndexLabels);
+			if (debugDraw.HasFlag(DebugDraw.Vertices))
 				DebugDrawVertexGizmos(transform, textStyle, drawIndices, highlightErrors);
 
 			textStyle.normal.textColor = edgeColor;
-			if (drawElements.HasFlag(DebugDrawElements.Edges))
+			if (debugDraw.HasFlag(DebugDraw.Edges))
 				DebugDrawEdgeGizmos(transform, textStyle, drawIndices, highlightErrors);
-			if (drawElements.HasFlag(DebugDrawElements.EdgeCycles))
+			if (debugDraw.HasFlag(DebugDraw.EdgeCycles))
 				DebugDrawEdgeCycleGizmos(transform, textStyle, drawIndices, highlightErrors);
 
-			var drawWinding = drawElements.HasFlag(DebugDrawElements.LoopsDrawWinding);
-			var drawRelations = drawElements.HasFlag(DebugDrawElements.LoopsDrawRelations);
+			var drawWinding = debugDraw.HasFlag(DebugDraw.LoopsWithWinding);
+			var drawRelations = debugDraw.HasFlag(DebugDraw.LoopsWithRelations);
 			textStyle.normal.textColor = loopColor;
-			if (drawElements.HasFlag(DebugDrawElements.Loops))
+			if (debugDraw.HasFlag(DebugDraw.Loops))
 				DebugDrawLoopGizmos(transform, textStyle, drawIndices, drawWinding, drawRelations, highlightErrors);
 			textStyle.normal.textColor = loopCyclesColor;
-			if (drawElements.HasFlag(DebugDrawElements.LoopCycles))
+			if (debugDraw.HasFlag(DebugDraw.LoopCycles))
 				DebugDrawLoopCycleGizmos(transform, textStyle, drawIndices, highlightErrors);
 
 			textStyle.normal.textColor = faceColor;
-			if (drawElements.HasFlag(DebugDrawElements.Faces))
+			if (debugDraw.HasFlag(DebugDraw.Faces))
 				DebugDrawFaceGizmos(transform, textStyle, drawIndices, highlightErrors);
 		}
 
