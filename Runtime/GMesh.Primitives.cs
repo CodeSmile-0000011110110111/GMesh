@@ -93,9 +93,7 @@ namespace CodeSmile.GraphMesh
 				throw new ArgumentException("minimum of 2 vertices per axis required");
 
 			var gMesh = new GMesh();
-			var jobHandle = gMesh.ScheduleCreatePlane(parameters);
-			jobHandle.Complete();
-
+			gMesh.ScheduleCreatePlane(parameters).Complete();
 			return gMesh;
 		}
 

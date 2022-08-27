@@ -503,9 +503,9 @@ namespace CodeSmile.GraphMesh
 				// Make sure this doesn't go unnoticed! (I'd rather not throw an exception in the Finalizer)
 				Debug.LogError("=====================================================================");
 				Debug.LogError("=====================================================================");
-				Debug.LogError($"GMesh: you forgot to call Dispose() on {this}! See the " +
+				Debug.LogError($"GMesh not disposed: {this} - The " +
 				               "'A Native Collection has not been disposed, resulting in a memory leak.' error messages " +
-				               "above and/or below this message? That's because of not calling Dispose() on this GMesh instance.");
+				               "above and/or below this message are likely because of this.");
 				Debug.LogError("=====================================================================");
 				Debug.LogError("=====================================================================");
 			}

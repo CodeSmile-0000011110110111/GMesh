@@ -4,12 +4,13 @@
 using System;
 using Unity.Burst;
 using Unity.Collections;
+using UnityEngine;
 
 namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
-		private GraphData _data = new(Allocator.Persistent);
+		private GraphData _data;
 
 		/// <summary>
 		/// The read-only collection of vertices.

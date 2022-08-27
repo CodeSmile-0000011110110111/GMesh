@@ -74,7 +74,7 @@ namespace CodeSmile.GraphMesh
 		/// <summary>
 		/// Creates an empty GMesh.
 		/// </summary>
-		public GMesh() {}
+		public GMesh() => _data = new GraphData(Allocator.Persistent);
 
 		/// <summary>
 		/// Copy constructor. Creates an instance of GMesh that is the exact copy of another mesh.
@@ -91,6 +91,7 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		/// <param name="vertexPositions"></param>
 		public GMesh(in NativeArray<float3> vertexPositions, bool disposeInputArray = false)
+			: this()
 		{
 			CreateFace(vertexPositions);
 			if (disposeInputArray)
