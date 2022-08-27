@@ -55,7 +55,7 @@ namespace CodeSmile.GraphMesh
 				Scale = scale;
 			}
 
-			public RigidTransform ToRigidTransform() => new RigidTransform(quaternion.Euler(math.radians(Rotation)), Translation);
+			public RigidTransform ToRigidTransform() => new(quaternion.Euler(math.radians(Rotation)), Translation);
 		}
 	}
 }

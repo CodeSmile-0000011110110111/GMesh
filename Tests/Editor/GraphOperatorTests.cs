@@ -94,8 +94,8 @@ public class GraphOperatorTests
 
 			// vertex 2 is now alone ...
 			gMesh.RemoveEdgeFromDiskCycle(2, disconnectedEdge);
-			Assert.AreEqual(0, gMesh.CalculateEdgeCount(2));
 			Assert.IsTrue(gMesh.GetVertex(2).BaseEdgeIndex == GMesh.UnsetIndex);
+			Assert.AreEqual(0, gMesh.CalculateEdgeCount(2));
 		}
 	}
 }

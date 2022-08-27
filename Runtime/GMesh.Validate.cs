@@ -1,6 +1,8 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using System;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace CodeSmile.GraphMesh
@@ -480,5 +482,13 @@ namespace CodeSmile.GraphMesh
 			}
 			return true;
 		}
+		
+		private static void ValidateVertexCollection<T>(in NativeArray<T> vertices) where T : struct
+		{
+			var vertexCount = vertices.Length;
+			if (vertexCount < 3)
+				throw new ArgumentException($"face with only {vertexCount} vertices is technically possible but reasonably nonsensical");
+		}
+
 	}
 }

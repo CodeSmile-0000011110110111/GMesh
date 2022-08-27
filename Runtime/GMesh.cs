@@ -55,7 +55,20 @@ namespace CodeSmile.GraphMesh
 		/// </summary>
 		private static readonly double GridUpscale = 1.0 / GridSize; // inverse of grid size (eg 0.001 => 1000)
 
+		/// <summary>
+		/// Compares to GMesh instances for equality.
+		/// </summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
 		public static bool operator ==(GMesh left, GMesh right) => Equals(left, right);
+
+		/// <summary>
+		/// Compares to GMesh instances for inequality.
+		/// </summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
 		public static bool operator !=(GMesh left, GMesh right) => !Equals(left, right);
 
 		/// <summary>
@@ -83,5 +96,33 @@ namespace CodeSmile.GraphMesh
 			if (disposeInputArray)
 				vertexPositions.Dispose();
 		}
+
+		/// <summary>
+		/// Clones the instance, returns a new GMesh instance that is an exact copy.
+		/// </summary>
+		/// <param name="other"></param>
+		public object Clone() => new GMesh(this);
+
+		public bool Equals(GMesh other)
+		{
+			if (ReferenceEquals(null, other))
+				return false;
+			if (ReferenceEquals(this, other))
+				return true;
+
+			return _pivot.Equals(other._pivot) && _data.Equals(other._data);
+		}
+
+		public override bool Equals(object obj) => ReferenceEquals(this, obj) || obj is GMesh other && Equals(other);
+
+		public override int GetHashCode()
+		{
+			var hashCode = new HashCode();
+			hashCode.Add(_pivot);
+			hashCode.Add(_data);
+			return hashCode.ToHashCode();
+		}
+
+		~GMesh() => OnFinalizeVerifyCollectionsAreDisposed();
 	}
 }

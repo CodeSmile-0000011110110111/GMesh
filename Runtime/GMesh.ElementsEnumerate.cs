@@ -7,6 +7,7 @@ namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
+		
 		/// <summary>
 		/// Enumerates over all loops in a face. Return true from predicate to break out of loop early.
 		/// </summary>

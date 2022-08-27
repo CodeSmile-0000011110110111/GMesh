@@ -2,8 +2,8 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
-using System.Runtime.InteropServices;
 using Unity.Burst;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 
@@ -11,8 +11,6 @@ namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
-		private Calculate _calculate;
-
 		/// <summary>
 		/// Calculates vertices for an n-gon with the given number of vertices and scale where vertices go in clockwise order around
 		/// the center (0,0,0) with first vertex position (0,0,scale).
@@ -98,12 +96,12 @@ namespace CodeSmile.GraphMesh
 		/// <returns></returns>
 		public int CalculateEdgeCount(in Vertex vertex) => Calculate.DiskCycleEdgeCount(_data, vertex);
 
-		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+		[BurstCompile]
 		internal readonly struct Calculate
 		{
 			public static float3 Centroid(in GraphData data)
 			{
-				// TODO: implement using jobs
+				// TODO: this could be a parallel job
 				var sum = float3.zero;
 				var vCount = data.Vertices.Length; // enumerate the entire list, including possibly invalid vertices
 				for (var i = 0; i < vCount; i++)
@@ -117,20 +115,19 @@ namespace CodeSmile.GraphMesh
 			public static float3 Centroid(in GraphData data, in Face face)
 			{
 #if GMESH_VALIDATION
-				if (face.IsValid == false)
-					throw new ArgumentException("face is not valid");
-
-				// TODO: validate loop cycle to catch infinite loops
+				if (face.IsValid == false) throw new ArgumentException("face is not valid");
+				if (face.FirstLoopIndex == UnsetIndex) throw new ArgumentException("face's loop index is unset");
+				// TODO: validate loop cycle to catch possible infinite loops
 #endif
 
-				var sumOfVertexPositions = float3.zero;
 				var firstLoopIndex = face.FirstLoopIndex;
+				var sumOfVertexPositions = float3.zero;
 				var loop = data.GetLoop(firstLoopIndex);
 				do
 				{
 					sumOfVertexPositions += data.GetVertex(loop.StartVertexIndex).Position;
 					loop = data.GetLoop(loop.NextLoopIndex);
-				} while (loop.Index != firstLoopIndex);
+				} while (Hint.Likely(loop.Index != firstLoopIndex));
 
 				return sumOfVertexPositions / face.ElementCount;
 			}
@@ -157,19 +154,20 @@ namespace CodeSmile.GraphMesh
 			public static int DiskCycleEdgeCount(in GraphData data, in Vertex vertex)
 			{
 #if GMESH_VALIDATION
-				if (vertex.IsValid == false)
-					throw new ArgumentException("vertex is not valid");
-
-				// TODO: validate disk cycle to catch infinite loops
+				if (vertex.IsValid == false) throw new ArgumentException("vertex is not valid");
+				// TODO: validate loop cycle to catch possible infinite loops
 #endif
 
+				if (vertex.BaseEdgeIndex == UnsetIndex)
+					return 0;
+				
 				var edgeCount = 0;
 				var edge = data.GetEdge(vertex.BaseEdgeIndex);
 				do
 				{
 					edgeCount++;
 					edge = data.GetEdge(edge.GetNextEdgeIndex(vertex.Index));
-				} while (edge.Index != vertex.BaseEdgeIndex);
+				} while (Hint.Likely(edge.Index != vertex.BaseEdgeIndex));
 
 				return edgeCount;
 			}

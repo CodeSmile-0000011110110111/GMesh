@@ -492,5 +492,23 @@ namespace CodeSmile.GraphMesh
 				Debug.LogWarning("DrawGizmos: " + e);
 			}
 		}
+
+		/// <summary>
+		/// This is the big fat ugly error message producer if user failed to call Dispose().
+		/// </summary>
+		private void OnFinalizeVerifyCollectionsAreDisposed()
+		{
+			if (IsDisposed == false)
+			{
+				// Make sure this doesn't go unnoticed! (I'd rather not throw an exception in the Finalizer)
+				Debug.LogError("=====================================================================");
+				Debug.LogError("=====================================================================");
+				Debug.LogError($"GMesh: you forgot to call Dispose() on {this}! See the " +
+				               "'A Native Collection has not been disposed, resulting in a memory leak.' error messages " +
+				               "above and/or below this message? That's because of not calling Dispose() on this GMesh instance.");
+				Debug.LogError("=====================================================================");
+				Debug.LogError("=====================================================================");
+			}
+		}
 	}
 }
