@@ -60,7 +60,7 @@ namespace CodeSmile.GraphMesh
 				public void Execute(int index)
 				{
 					var x = index % PlaneVertexCount.x;
-					var y = index / PlaneVertexCount.y;
+					var y = index / PlaneVertexCount.x;
 					var pos = transform(transform, float3(x, y, 0f) * step - centerOffset);
 					Vertices[index] = new Vertex { Index = index, BaseEdgeIndex = UnsetIndex, Position = pos };
 				}
