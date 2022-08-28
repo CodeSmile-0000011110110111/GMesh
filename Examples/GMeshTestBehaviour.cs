@@ -93,7 +93,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 
 		for (var t = 0; t < _edgeTesselation; t++)
 		{
-			var edgeCount = _gMesh.EdgeCount;
+			var edgeCount = _gMesh.ValidEdgeCount;
 			for (var i = 0; i < edgeCount; i++)
 				_gMesh.SplitEdgeAndCreateVertex(i);
 		}

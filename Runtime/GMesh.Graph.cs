@@ -10,7 +10,7 @@ namespace CodeSmile.GraphMesh
 		private Loop CreateAndInsertLoop(ref Loop existingLoop, ref Edge newLoopEdge, int loopVertexIndex)
 		{
 			// Create and insert the new loop on the same face
-			var newLoopIndex = LoopCount;
+			var newLoopIndex = ValidLoopCount;
 			newLoopEdge.BaseLoopIndex = newLoopIndex;
 
 			var newLoop = Loop.Create(existingLoop.FaceIndex, newLoopEdge.Index, loopVertexIndex,

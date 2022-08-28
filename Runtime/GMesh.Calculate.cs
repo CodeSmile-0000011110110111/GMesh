@@ -109,7 +109,7 @@ namespace CodeSmile.GraphMesh
 					var v = data.GetVertex(i);
 					sum += math.select(float3.zero, v.Position, v.IsValid);
 				}
-				return sum / data.VertexCount;
+				return sum / data.ValidVertexCount;
 			}
 
 			public static float3 Centroid(in GraphData data, in Face face)

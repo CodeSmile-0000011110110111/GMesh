@@ -37,8 +37,8 @@ namespace CodeSmile.GraphMesh
 			var totalLoopCount = 0;
 			for (var i = 0; i < meshCount; i++)
 			{
-				totalFaceCount += inputMeshes[i].FaceCount;
-				totalLoopCount += inputMeshes[i].LoopCount;
+				totalFaceCount += inputMeshes[i].ValidFaceCount;
+				totalLoopCount += inputMeshes[i].ValidLoopCount;
 			}
 
 			if (totalFaceCount == 0)
@@ -64,13 +64,13 @@ namespace CodeSmile.GraphMesh
 			for (var meshIndex = 0; meshIndex < meshCount; meshIndex++)
 			{
 				var inputMesh = inputMeshes[meshIndex];
-				var data = new NativeArray<JCombine.MergeData>(inputMesh.LoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+				var data = new NativeArray<JCombine.MergeData>(inputMesh.ValidLoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 				var job = new JCombine.GatherDataJob
 				{
 					CombineData = data, MeshIndex = meshIndex, Faces = inputMesh.Faces, Loops = inputMesh.Loops, Vertices = inputMesh.Vertices,
 				};
 				gatherData[meshIndex] = data;
-				gatherHandles[meshIndex] = job.Schedule(inputMesh.LoopCount, 1);
+				gatherHandles[meshIndex] = job.Schedule(inputMesh.ValidLoopCount, 1);
 			}
 
 			var combinedGatherHandle = JobHandle.CombineDependencies(gatherHandles);

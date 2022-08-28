@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -33,136 +34,69 @@ namespace CodeSmile.GraphMesh
 			else
 				mesh.Clear();
 
-			mesh.subMeshCount = 1;
-
-			// SETUP
-			var totalVertCount = 0;
-			var totalIndexCount = 0;
-			var faceCount = FaceCount;
-			var triangleStartIndices = new NativeArray<int>(faceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-			for (var i = 0; i < faceCount; i++)
-			{
-				triangleStartIndices[i] = totalIndexCount;
-				var faceElementCount = Faces[i].ElementCount;
-				totalVertCount += faceElementCount;
-				totalIndexCount += (faceElementCount - 2) * 3;
-			}
-
-			var indicesAre16Bit = totalIndexCount < ushort.MaxValue;
-			var meshIndices16 = indicesAre16Bit ? new NativeArray<ushort>(totalIndexCount, Allocator.TempJob) : default;
-			var meshIndices32 = indicesAre16Bit == false ? new NativeArray<uint>(totalIndexCount, Allocator.TempJob) : default;
-			var meshVertices = new NativeArray<JMesh.VertexPositionNormalUV>(totalVertCount, Allocator.TempJob);
-
-			// MESHDATA
+			// CREATE MESHDATA
 			var meshDataArray = Mesh.AllocateWritableMeshData(1);
+
+			var faces = Faces;
+
+			// COUNT VERTICES & TRIANGLES
+			var triangleStartIndices = new NativeArray<int>(ValidFaceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+			var totalVCount = new NativeReference<int>(Allocator.TempJob);
+			var totalICount = new NativeReference<int>(Allocator.TempJob);
+			var gatherDataJob = new JMesh.GatherFaceDataJob
+			{
+				Faces = faces, TriangleStartIndices = triangleStartIndices, TotalVertexCount = totalVCount,
+				TotalIndexCount = totalICount,
+			};
+			var faceCount = _data.Faces.Length;
+			var gatherDataHandle = gatherDataJob.Schedule(faceCount, default);
+
+			// COUNT COMPLETE
 			var meshData = meshDataArray[0];
+			gatherDataHandle.Complete();
 
+			// PREPARE VERTEX BUFFER
+			var attributes = new NativeArray<VertexAttributeDescriptor>(JMesh.VertexPositionNormalUV.AttributeCount, Allocator.Temp,
+				NativeArrayOptions.UninitializedMemory);
+			JMesh.VertexPositionNormalUV.GetAttributes(ref attributes);
+			var totalVertexCount = totalVCount.Value;
+			meshData.SetVertexBufferParams(totalVertexCount, attributes);
+			attributes.Dispose();
 
-			try
+			// PREPARE INDEX BUFFER
+			var totalIndexCount = totalICount.Value;
+			var indicesAre16Bit = totalIndexCount < ushort.MaxValue;
+			meshData.SetIndexBufferParams(totalIndexCount, indicesAre16Bit ? IndexFormat.UInt16 : IndexFormat.UInt32);
+
+			// TRI(STR)ANGULATION
+			JobHandle triangulateHandle;
+			if (indicesAre16Bit)
 			{
-				// TODO: try triangle strip triangulation
-				// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
-				// https://en.wikipedia.org/wiki/Triangle_strip
-
-				// TRI(STR)ANGULATION
-				var triangulateJob = new JMesh.FanTriangulateFaces16Bit
+				var triangulateJob = new JMesh.FanTriangulateFaces16BitJob
 				{
-					Faces = Faces, Loops = Loops, Vertices = Vertices, VBuffer = meshVertices, IBuffer = meshIndices16,
-					TriangleStartIndices = triangleStartIndices
+					Faces = faces, Loops = Loops, Vertices = Vertices, TriangleStartIndices = triangleStartIndices,
+					VBuffer = meshData.GetVertexData<JMesh.VertexPositionNormalUV>(),
+					IBuffer = meshData.GetIndexData<ushort>(),
 				};
-				var triangulateHandle = triangulateJob.Schedule(LoopCount, 1);
-				triangleStartIndices.Dispose(triangulateHandle);
-				triangulateHandle.Complete();
-
-				/*
-				uint vIndex = 0;
-				var faceCount = FaceCount;
-				for (var faceIndex = 0; faceIndex < faceCount; faceIndex++)
-				{
-					var triangleStartVertIndex = vIndex;
-					uint triangleVertIndex = 0;
-
-					// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
-					// => only guaranteed to work with convex shapes
-					ForEachLoop(faceIndex, loop =>
-					{
-						var loopVert = GetVertex(loop.StartVertexIndex);
-
-						if (triangleVertIndex > 2)
-						{
-							// add extra fan triangles from first vertex to last vertex
-							if (indicesAre16Bit)
-							{
-								meshIndices16.Add((ushort)triangleStartVertIndex);
-								meshIndices16.Add((ushort)(triangleStartVertIndex + triangleVertIndex - 1));
-							}
-							else
-							{
-								meshIndices32.Add(triangleStartVertIndex);
-								meshIndices32.Add(triangleStartVertIndex + triangleVertIndex - 1);
-							}
-						}
-
-						if (indicesAre16Bit)
-							meshIndices16.Add((ushort)(triangleStartVertIndex + triangleVertIndex));
-						else
-							meshIndices32.Add(triangleStartVertIndex + triangleVertIndex);
-
-						meshVertices.Add(new JMesh.VertexPositionNormalUV(loopVert.Position, math.up(), float2.zero));
-
-						triangleVertIndex++;
-						vIndex++;
-					});
-				}
-				*/
-
-				// FIXME: write directly to buffers!
-
-				// VERTEX BUFFER PARAMS
-				var attributes = new NativeArray<VertexAttributeDescriptor>(JMesh.VertexPositionNormalUV.AttributeCount, Allocator.Temp,
-					NativeArrayOptions.UninitializedMemory);
-				JMesh.VertexPositionNormalUV.GetAttributes(ref attributes);
-
-				var vCount = meshVertices.Length;
-				meshData.SetVertexBufferParams(vCount, attributes);
-				attributes.Dispose();
-
-				// VERTEX BUFFER
-				var vertexData = meshData.GetVertexData<JMesh.VertexPositionNormalUV>();
-				NativeArray<JMesh.VertexPositionNormalUV>.Copy(meshVertices, vertexData);
-
-				// INDEX BUFFER
-				var iCount = indicesAre16Bit ? meshIndices16.Length : meshIndices32.Length;
-				if (indicesAre16Bit && iCount >= ushort.MaxValue)
-					throw new InvalidOperationException("index count exceeds ushort.MaxValue - assumption facecount*3 < index count");
-
-				meshData.SetIndexBufferParams(iCount, indicesAre16Bit ? IndexFormat.UInt16 : IndexFormat.UInt32);
-				if (indicesAre16Bit)
-					NativeArray<ushort>.Copy(meshIndices16, meshData.GetIndexData<ushort>());
-				else
-					NativeArray<uint>.Copy(meshIndices32, meshData.GetIndexData<uint>());
-
-				// SUBMESH
-				meshData.subMeshCount = 1;
-				meshData.SetSubMesh(0, new SubMeshDescriptor(0, iCount) { vertexCount = vCount });
+				triangulateHandle = triangulateJob.Schedule(ValidLoopCount, 4);
 			}
-			finally
-			{
-				// APPLY MESHDATA & DISPOSE
-				Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
-				meshVertices.Dispose();
+			else
+				throw new NotImplementedException("TODO: 32 bit mesh indices");
+			
+			// COMPLETE & DISPOSE
+			totalVCount.Dispose();
+			totalICount.Dispose();
+			triangleStartIndices.Dispose(triangulateHandle);
+			triangulateHandle.Complete();
 
-				if (meshIndices16.IsCreated)
-					meshIndices16.Dispose();
-				if (meshIndices32.IsCreated)
-					meshIndices32.Dispose();
-			}
-			// RECALCULATE & OPTIMIZE
+			// APPLY MESHDATA
+			meshData.subMeshCount = 1;
+			meshData.SetSubMesh(0, new SubMeshDescriptor(0, totalIndexCount) { vertexCount = totalVertexCount });
+			Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
+
+			// RECALCULATE
 			mesh.RecalculateBounds();
 			mesh.RecalculateNormals();
-			//mesh.RecalculateTangents();
-			//mesh.RecalculateUVDistributionMetrics();
-			//mesh.Optimize();
 
 			//mesh.name = ToString();
 			return mesh;
@@ -171,20 +105,48 @@ namespace CodeSmile.GraphMesh
 		private static class JMesh
 		{
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-			public struct FanTriangulateFaces16Bit : IJobParallelFor
+			public struct GatherFaceDataJob : IJobFor
+			{
+				[ReadOnly] public NativeArray<Face>.ReadOnly Faces;
+				[WriteOnly] public NativeArray<int> TriangleStartIndices;
+
+				public NativeReference<int> TotalVertexCount;
+				public NativeReference<int> TotalIndexCount;
+
+				public void Execute(int faceIndex)
+				{
+					var face = Faces[faceIndex];
+					if (Hint.Likely(face.IsValid))
+					{
+						TriangleStartIndices[faceIndex] = TotalIndexCount.Value;
+						var faceElementCount = face.ElementCount;
+						TotalVertexCount.Value += faceElementCount;
+						TotalIndexCount.Value += (faceElementCount - 2) * 3;
+					}
+				}
+			}
+
+			// TODO: split into two jobs, one for vertices and another for indices ?
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+			public struct FanTriangulateFaces16BitJob : IJobParallelFor
 			{
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Face>.ReadOnly Faces;
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Loop>.ReadOnly Loops;
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Vertex>.ReadOnly Vertices;
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<int> TriangleStartIndices;
 
-				[WriteOnly] [NativeDisableParallelForRestriction] public NativeArray<VertexPositionNormalUV> VBuffer;
-				[WriteOnly] [NativeDisableParallelForRestriction] public NativeArray<ushort> IBuffer;
+				[WriteOnly] [NoAlias] [NativeDisableParallelForRestriction] [NativeDisableContainerSafetyRestriction]
+				public NativeArray<VertexPositionNormalUV> VBuffer;
 
-				//public NativeReference<int> IndexBufferIndex;
+				[WriteOnly] [NoAlias] [NativeDisableParallelForRestriction] [NativeDisableContainerSafetyRestriction]
+				public NativeArray<ushort> IBuffer;
 
 				public void Execute(int loopIndex)
 				{
+					// TODO: try triangle strip triangulation
+					// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
+					// https://en.wikipedia.org/wiki/Triangle_strip
+
 					// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
 					// => only guaranteed to work with convex polygons
 					var loop = Loops[loopIndex];
@@ -200,7 +162,7 @@ namespace CodeSmile.GraphMesh
 						for (var i = 0; i < elementCount; i++)
 						{
 							var loopVert = Vertices[loop.StartVertexIndex];
-							if (triangleVertIndex > 2)
+							if (Hint.Likely(triangleVertIndex > 2))
 							{
 								// add extra fan triangles from first vertex to last vertex
 								IBuffer[iIndex++] = (ushort)triangleStartVertIndex;

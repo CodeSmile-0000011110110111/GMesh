@@ -33,22 +33,22 @@ namespace CodeSmile.GraphMesh
 		/// Number of valid vertices in the mesh.
 		/// NOT to be mistaken for the length of the list!
 		/// </summary>
-		public int VertexCount => _data.VertexCount;
+		public int ValidVertexCount => _data.ValidVertexCount;
 		/// <summary>
 		/// Number of valid edges in the mesh.
 		/// NOT to be mistaken for the length of the list!
 		/// </summary>
-		public int EdgeCount => _data.EdgeCount;
+		public int ValidEdgeCount => _data.ValidEdgeCount;
 		/// <summary>
 		/// Number of valid loops in the mesh.
 		/// NOT to be mistaken for the length of the list!
 		/// </summary>
-		public int LoopCount => _data.LoopCount;
+		public int ValidLoopCount => _data.ValidLoopCount;
 		/// <summary>
 		/// Number of valid faces in the mesh.
 		/// NOT to be mistaken for the length of the list!
 		/// </summary>
-		public int FaceCount => _data.FaceCount;
+		public int ValidFaceCount => _data.ValidFaceCount;
 
 		/// <summary>
 		/// Check if the GMesh needs disposing. For the poor developer who got confused. :)
@@ -240,19 +240,23 @@ namespace CodeSmile.GraphMesh
 			/// <summary>
 			/// Number of vertices in the mesh.
 			/// </summary>
-			public int VertexCount { get => _elementCounts[(int)Element.Vertex]; internal set => _elementCounts[(int)Element.Vertex] = value; }
+			public int ValidVertexCount
+			{
+				get => _elementCounts[(int)Element.Vertex];
+				internal set => _elementCounts[(int)Element.Vertex] = value;
+			}
 			/// <summary>
 			/// Number of edges in the mesh.
 			/// </summary>
-			public int EdgeCount { get => _elementCounts[(int)Element.Edge]; internal set => _elementCounts[(int)Element.Edge] = value; }
+			public int ValidEdgeCount { get => _elementCounts[(int)Element.Edge]; internal set => _elementCounts[(int)Element.Edge] = value; }
 			/// <summary>
 			/// Number of loops in the mesh.
 			/// </summary>
-			public int LoopCount { get => _elementCounts[(int)Element.Loop]; internal set => _elementCounts[(int)Element.Loop] = value; }
+			public int ValidLoopCount { get => _elementCounts[(int)Element.Loop]; internal set => _elementCounts[(int)Element.Loop] = value; }
 			/// <summary>
 			/// Number of faces in the mesh.
 			/// </summary>
-			public int FaceCount { get => _elementCounts[(int)Element.Face]; internal set => _elementCounts[(int)Element.Face] = value; }
+			public int ValidFaceCount { get => _elementCounts[(int)Element.Face]; internal set => _elementCounts[(int)Element.Face] = value; }
 
 			/// <summary>
 			/// Check if the GMesh needs disposing. For developers who get easily confused. :)
@@ -320,7 +324,7 @@ namespace CodeSmile.GraphMesh
 				vertex.Index = NextVertexIndex;
 				if (Hint.Likely(vertex.Index < _vertices.Length)) SetVertex(vertex);
 				else _vertices.Add(vertex);
-				VertexCount++;
+				ValidVertexCount++;
 				return vertex.Index;
 			}
 
@@ -329,7 +333,7 @@ namespace CodeSmile.GraphMesh
 				edge.Index = NextEdgeIndex;
 				if (Hint.Likely(edge.Index < _edges.Length)) SetEdge(edge);
 				else _edges.Add(edge);
-				EdgeCount++;
+				ValidEdgeCount++;
 				return edge.Index;
 			}
 
@@ -338,7 +342,7 @@ namespace CodeSmile.GraphMesh
 				loop.Index = NextLoopIndex;
 				if (Hint.Likely(loop.Index < _loops.Length)) SetLoop(loop);
 				else _loops.Add(loop);
-				LoopCount++;
+				ValidLoopCount++;
 			}
 
 			internal int AddFace(ref Face face)
@@ -346,7 +350,7 @@ namespace CodeSmile.GraphMesh
 				face.Index = NextFaceIndex;
 				if (Hint.Likely(face.Index < _faces.Length)) SetFace(face);
 				else _faces.Add(face);
-				FaceCount++;
+				ValidFaceCount++;
 				return face.Index;
 			}
 
@@ -355,7 +359,7 @@ namespace CodeSmile.GraphMesh
 				var vertex = GetVertex(index);
 				vertex.Invalidate();
 				_vertices[index] = vertex;
-				VertexCount--;
+				ValidVertexCount--;
 			}
 
 			internal void InvalidateEdge(int index)
@@ -363,7 +367,7 @@ namespace CodeSmile.GraphMesh
 				var edge = GetEdge(index);
 				edge.Invalidate();
 				_edges[index] = edge;
-				EdgeCount--;
+				ValidEdgeCount--;
 			}
 
 			internal void InvalidateLoop(int index)
@@ -371,7 +375,7 @@ namespace CodeSmile.GraphMesh
 				var loop = GetLoop(index);
 				loop.Invalidate();
 				_loops[index] = loop;
-				LoopCount--;
+				ValidLoopCount--;
 			}
 
 			internal void InvalidateFace(int index)
@@ -379,7 +383,7 @@ namespace CodeSmile.GraphMesh
 				var face = GetFace(index);
 				face.Invalidate();
 				_faces[index] = face;
-				FaceCount--;
+				ValidFaceCount--;
 			}
 
 			public bool Equals(GraphData other) => _elementCounts.Equals(other._elementCounts) &&

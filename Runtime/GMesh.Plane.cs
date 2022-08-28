@@ -47,7 +47,7 @@ namespace CodeSmile.GraphMesh
 				public void Init(ref GraphData data, int expectedVertexCount)
 				{
 					// set expected number of vertices directly
-					data.VertexCount = expectedVertexCount;
+					data.ValidVertexCount = expectedVertexCount;
 					data.InitializeVerticesWithSize(expectedVertexCount);
 					Vertices = data.VerticesArray;
 

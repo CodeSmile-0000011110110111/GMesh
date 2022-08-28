@@ -29,7 +29,7 @@ namespace CodeSmile.GraphMesh
 		}
 
 		public override string ToString() =>
-			$"{GetType().Name} with {FaceCount} faces, {EdgeCount} edges, {VertexCount} vertices, Pivot: {Pivot}";
+			$"{GetType().Name} with {ValidFaceCount} faces, {ValidEdgeCount} edges, {ValidVertexCount} vertices, Pivot: {Pivot}";
 
 		/// <summary>
 		/// Dump all elements for debugging purposes.
@@ -42,13 +42,13 @@ namespace CodeSmile.GraphMesh
 					Debug.Log(headerMessage);
 
 				Debug.Log(this);
-				for (var i = 0; i < FaceCount; i++)
+				for (var i = 0; i < ValidFaceCount; i++)
 					Debug.Log(GetFace(i));
-				for (var i = 0; i < LoopCount; i++)
+				for (var i = 0; i < ValidLoopCount; i++)
 					Debug.Log(GetLoop(i));
-				for (var i = 0; i < EdgeCount; i++)
+				for (var i = 0; i < ValidEdgeCount; i++)
 					Debug.Log(GetEdge(i));
-				for (var i = 0; i < VertexCount; i++)
+				for (var i = 0; i < ValidVertexCount; i++)
 					Debug.Log(GetVertex(i));
 			}
 			catch (Exception e)

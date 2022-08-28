@@ -24,12 +24,12 @@ namespace CodeSmile.GraphMesh
 				issue = $"Invalidated => {face}";
 				return false;
 			}
-			if (face.Index < 0 || face.Index >= FaceCount)
+			if (face.Index < 0 || face.Index >= ValidFaceCount)
 			{
 				issue = $"Index out of bounds:\n{face}";
 				return false;
 			}
-			if (face.FirstLoopIndex < 0 || face.FirstLoopIndex >= LoopCount)
+			if (face.FirstLoopIndex < 0 || face.FirstLoopIndex >= ValidLoopCount)
 			{
 				issue = $"FirstLoopIndex out of bounds:\n{face}";
 				return false;
@@ -136,42 +136,42 @@ namespace CodeSmile.GraphMesh
 				issue = $"Invalidated => {loop}";
 				return false;
 			}
-			if (loop.Index < 0 || loop.Index >= LoopCount)
+			if (loop.Index < 0 || loop.Index >= ValidLoopCount)
 			{
 				issue = $"Index out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.FaceIndex < 0 || loop.FaceIndex >= FaceCount)
+			if (loop.FaceIndex < 0 || loop.FaceIndex >= ValidFaceCount)
 			{
 				issue = $"FaceIndex out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.EdgeIndex < 0 || loop.EdgeIndex >= EdgeCount)
+			if (loop.EdgeIndex < 0 || loop.EdgeIndex >= ValidEdgeCount)
 			{
 				issue = $"EdgeIndex out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.StartVertexIndex < 0 || loop.StartVertexIndex >= VertexCount)
+			if (loop.StartVertexIndex < 0 || loop.StartVertexIndex >= ValidVertexCount)
 			{
 				issue = $"StartVertexIndex out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.PrevLoopIndex < 0 || loop.PrevLoopIndex >= LoopCount)
+			if (loop.PrevLoopIndex < 0 || loop.PrevLoopIndex >= ValidLoopCount)
 			{
 				issue = $"PrevLoopIndex out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.NextLoopIndex < 0 || loop.NextLoopIndex >= LoopCount)
+			if (loop.NextLoopIndex < 0 || loop.NextLoopIndex >= ValidLoopCount)
 			{
 				issue = $"NextLoopIndex out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.PrevRadialLoopIndex < 0 || loop.PrevRadialLoopIndex >= LoopCount)
+			if (loop.PrevRadialLoopIndex < 0 || loop.PrevRadialLoopIndex >= ValidLoopCount)
 			{
 				issue = $"PrevRadialLoopIndex out of bounds:\n{loop}";
 				return false;
 			}
-			if (loop.NextRadialLoopIndex < 0 || loop.NextRadialLoopIndex >= LoopCount)
+			if (loop.NextRadialLoopIndex < 0 || loop.NextRadialLoopIndex >= ValidLoopCount)
 			{
 				issue = $"NextRadialLoopIndex out of bounds:\n{loop}";
 				return false;
@@ -194,42 +194,42 @@ namespace CodeSmile.GraphMesh
 				issue = $"Invalidated => {edge}";
 				return false;
 			}
-			if (edge.Index < 0 || edge.Index >= EdgeCount)
+			if (edge.Index < 0 || edge.Index >= ValidEdgeCount)
 			{
 				issue = $"Index out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.AVertexIndex < 0 || edge.AVertexIndex >= VertexCount)
+			if (edge.AVertexIndex < 0 || edge.AVertexIndex >= ValidVertexCount)
 			{
 				issue = $"AVertexIndex out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.OVertexIndex < 0 || edge.OVertexIndex >= VertexCount)
+			if (edge.OVertexIndex < 0 || edge.OVertexIndex >= ValidVertexCount)
 			{
 				issue = $"OVertexIndex out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.APrevEdgeIndex < 0 || edge.APrevEdgeIndex >= EdgeCount)
+			if (edge.APrevEdgeIndex < 0 || edge.APrevEdgeIndex >= ValidEdgeCount)
 			{
 				issue = $"APrevEdgeIndex out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.ANextEdgeIndex < 0 || edge.ANextEdgeIndex >= EdgeCount)
+			if (edge.ANextEdgeIndex < 0 || edge.ANextEdgeIndex >= ValidEdgeCount)
 			{
 				issue = $"ANextEdgeIndex out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.OPrevEdgeIndex < 0 || edge.OPrevEdgeIndex >= EdgeCount)
+			if (edge.OPrevEdgeIndex < 0 || edge.OPrevEdgeIndex >= ValidEdgeCount)
 			{
 				issue = $"OPrevEdgeIndex out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.ONextEdgeIndex < 0 || edge.ONextEdgeIndex >= EdgeCount)
+			if (edge.ONextEdgeIndex < 0 || edge.ONextEdgeIndex >= ValidEdgeCount)
 			{
 				issue = $"ONextEdgeIndex out of bounds:\n{edge}";
 				return false;
 			}
-			if (edge.BaseLoopIndex < 0 || edge.BaseLoopIndex >= LoopCount)
+			if (edge.BaseLoopIndex < 0 || edge.BaseLoopIndex >= ValidLoopCount)
 			{
 				issue = $"BaseLoopIndex out of bounds:\n{edge}";
 				return false;
@@ -258,8 +258,8 @@ namespace CodeSmile.GraphMesh
 				issue = $"base loop does not point back to edge:\n{edge}\n{baseLoop}";
 				return false;
 			}
-			if (baseLoop.PrevRadialLoopIndex < 0 || baseLoop.PrevRadialLoopIndex >= LoopCount ||
-			    baseLoop.NextRadialLoopIndex < 0 || baseLoop.NextRadialLoopIndex >= LoopCount)
+			if (baseLoop.PrevRadialLoopIndex < 0 || baseLoop.PrevRadialLoopIndex >= ValidLoopCount ||
+			    baseLoop.NextRadialLoopIndex < 0 || baseLoop.NextRadialLoopIndex >= ValidLoopCount)
 			{
 				issue = $"radial loop index out of bounds:\n{baseLoop}";
 				return false;
@@ -393,12 +393,12 @@ namespace CodeSmile.GraphMesh
 				issue = $"Invalidated => {vertex}";
 				return false;
 			}
-			if (vertex.Index < 0 || vertex.Index >= VertexCount)
+			if (vertex.Index < 0 || vertex.Index >= ValidVertexCount)
 			{
 				issue = $"Index out of bounds:\n{vertex}";
 				return false;
 			}
-			if (vertex.BaseEdgeIndex < 0 || vertex.BaseEdgeIndex >= EdgeCount)
+			if (vertex.BaseEdgeIndex < 0 || vertex.BaseEdgeIndex >= ValidEdgeCount)
 			{
 				issue = $"BaseEdgeIndex out of bounds:\n{vertex}";
 				return false;
@@ -425,7 +425,7 @@ namespace CodeSmile.GraphMesh
 
 		public bool ValidateFaces()
 		{
-			var faceCount = FaceCount;
+			var faceCount = ValidFaceCount;
 			for (var i = 0; i < faceCount; i++)
 			{
 				var face = GetFace(i);
@@ -440,7 +440,7 @@ namespace CodeSmile.GraphMesh
 
 		public bool ValidateLoops()
 		{
-			var loopCount = LoopCount;
+			var loopCount = ValidLoopCount;
 			for (var i = 0; i < loopCount; i++)
 			{
 				var loop = GetLoop(i);
@@ -455,7 +455,7 @@ namespace CodeSmile.GraphMesh
 
 		public bool ValidateEdges()
 		{
-			var edgeCount = EdgeCount;
+			var edgeCount = ValidEdgeCount;
 			for (var i = 0; i < edgeCount; i++)
 			{
 				var edge = GetEdge(i);
@@ -470,7 +470,7 @@ namespace CodeSmile.GraphMesh
 
 		public bool ValidateVertices()
 		{
-			var vertexCount = VertexCount;
+			var vertexCount = ValidVertexCount;
 			for (var i = 0; i < vertexCount; i++)
 			{
 				var vertex = GetVertex(i);

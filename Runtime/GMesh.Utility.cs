@@ -30,7 +30,7 @@ namespace CodeSmile.GraphMesh
 		/// <param name="gridSize"></param>
 		public void SnapVerticesToGrid(float gridSize)
 		{
-			for (var i = 0; i < VertexCount; i++)
+			for (var i = 0; i < ValidVertexCount; i++)
 			{
 				var vertex = GetVertex(i);
 				if (vertex.IsValid)

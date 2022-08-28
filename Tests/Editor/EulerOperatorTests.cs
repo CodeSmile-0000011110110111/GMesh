@@ -33,12 +33,12 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = gMesh.EdgeCount;
+			var edgeCount = gMesh.ValidEdgeCount;
 			for (var i = 0; i < edgeCount; i++)
 				gMesh.SplitEdgeAndCreateVertex(i);
 
 			gMesh.DebugLogAllElements();
-			Assert.AreEqual(1, gMesh.FaceCount);
+			Assert.AreEqual(1, gMesh.ValidFaceCount);
 			Assert.AreEqual(6, gMesh.GetFace(0).ElementCount);
 			Validate.AllElementsAndRelations(gMesh);
 		}
@@ -51,12 +51,12 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = gMesh.EdgeCount;
+			var edgeCount = gMesh.ValidEdgeCount;
 			for (var i = 0; i < edgeCount; i++)
 				gMesh.SplitEdgeAndCreateVertex(i);
 
 			gMesh.DebugLogAllElements();
-			Assert.AreEqual(1, gMesh.FaceCount);
+			Assert.AreEqual(1, gMesh.ValidFaceCount);
 			Assert.AreEqual(8, gMesh.GetFace(0).ElementCount);
 			Validate.AllElementsAndRelations(gMesh);
 		}
@@ -70,7 +70,7 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = gMesh.EdgeCount;
+			var edgeCount = gMesh.ValidEdgeCount;
 			for (var i = 0; i < edgeCount; i++)
 				gMesh.SplitEdgeAndCreateVertex(i);
 
@@ -86,7 +86,7 @@ public class EulerOperatorTests
 			Validate.AllElementsAndRelations(gMesh);
 
 			// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-			var edgeCount = gMesh.EdgeCount;
+			var edgeCount = gMesh.ValidEdgeCount;
 			for (var i = 0; i < edgeCount; i++)
 				gMesh.SplitEdgeAndCreateVertex(i);
 
@@ -105,7 +105,7 @@ public class EulerOperatorTests
 			for (var o = 0; o < 3; o++)
 			{
 				// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-				var edgeCount = gMesh.EdgeCount;
+				var edgeCount = gMesh.ValidEdgeCount;
 				for (var i = 0; i < edgeCount; i++)
 					gMesh.SplitEdgeAndCreateVertex(i);
 			}
@@ -131,7 +131,7 @@ public class EulerOperatorTests
 			for (var o = 0; o < 2; o++)
 			{
 				// CAUTION: the local variable is important since we'll be adding more edges, thus increasing mesh.EdgeCount (=> infinite loop!)
-				var edgeCount = gMesh.EdgeCount;
+				var edgeCount = gMesh.ValidEdgeCount;
 				for (var i = 0; i < edgeCount; i++)
 					gMesh.SplitEdgeAndCreateVertex(i);
 			}
