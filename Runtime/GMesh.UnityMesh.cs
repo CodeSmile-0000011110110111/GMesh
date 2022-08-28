@@ -25,12 +25,11 @@ namespace CodeSmile.GraphMesh
 		public Mesh ToMesh(Mesh mesh = null)
 		{
 			if (mesh == null)
-			{
 				mesh = new Mesh();
-				mesh.subMeshCount = 1;
-			}
 			else
 				mesh.Clear();
+
+			mesh.subMeshCount = 1;
 
 			var initialCapacity = FaceCount * 3;
 			var meshVertices = new NativeList<VertexPositionNormalUV>(initialCapacity, Allocator.TempJob);
@@ -42,78 +41,35 @@ namespace CodeSmile.GraphMesh
 
 			try
 			{
-				//var innerFaceTriangleIndices = new NativeList<uint>(Allocator.TempJob);
-
 				var faceCount = FaceCount;
 				for (var faceIndex = 0; faceIndex < faceCount; faceIndex++)
 				{
-					var face = GetFace(faceIndex);
-					var totalVertexCount = face.ElementCount;
 					var firstVertexIndex = (uint)meshVertices.Length;
 					var currentVertex = (uint)0;
-					var abDirNormal = float3.zero;
-					var acDirNormal = float3.zero;
-					//var vertCount = 0;
 
-					
-						// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
-						// => only guaranteed to work with convex shapes
-						ForEachLoop(faceIndex, loop =>
-						{
-							var loopVert = GetVertex(loop.StartVertexIndex);
-							
-							/*
-							if (vertCount == 1)
-								abDirNormal = math.normalize(loopVert.Position - meshVertices[(int)firstVertexIndex].Position);
-							else if (vertCount == 2)
-							{
-								acDirNormal = math.normalize(loopVert.Position - meshVertices[(int)firstVertexIndex].Position);
-
-								// 3 points on a line => skip this point
-								var lengthSquared = math.lengthsq(abDirNormal - acDirNormal);
-								Debug.Log($"length {lengthSquared} => ({abDirNormal} - {acDirNormal})");
-								//if (lengthSquared < GridSize) return;
-							}
-							vertCount++;
-							*/
-
-							if (currentVertex > 2)
-							{
-								// previous points
-
-								// add extra fan triangles from first vertex to last vertex
-								meshIndices.Add(firstVertexIndex);
-								meshIndices.Add(firstVertexIndex + currentVertex - 1);
-							}
-
-							meshIndices.Add(firstVertexIndex + currentVertex);
-							meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero));
-
-							currentVertex++;
-						});
-
-						// TODO: try triangle strip triangulation
-						// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
-						// https://en.wikipedia.org/wiki/Triangle_strip
-					
-				}
-
-				//throw new Exception();
-
-				/*
-				Debug.Log($"Tri count: {meshIndices.Length / 3f}, Index count: {meshIndices.Length}, Vertex count: {meshVertices.Length}");
-				var triCount = 0;
-				for (var i = 0; i < meshIndices.Length; i++)
-				{
-					triCount++;
-					if (triCount == 3)
+					// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
+					// => only guaranteed to work with convex shapes
+					ForEachLoop(faceIndex, loop =>
 					{
-						triCount = 0;
-						Debug.Log($"Tri: {meshVertices[(int)meshIndices[i - 2]].Position} => " +
-						          $"{meshVertices[(int)meshIndices[i - 1]].Position} => {meshVertices[(int)meshIndices[i]].Position}");
-					}
+						var loopVert = GetVertex(loop.StartVertexIndex);
+
+						if (currentVertex > 2)
+						{
+							// add extra fan triangles from first vertex to last vertex
+							meshIndices.Add(firstVertexIndex);
+							meshIndices.Add(firstVertexIndex + currentVertex - 1);
+						}
+
+						meshIndices.Add(firstVertexIndex + currentVertex);
+						meshVertices.Add(new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero));
+
+						currentVertex++;
+					});
+
+					// TODO: try triangle strip triangulation
+					// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
+					// https://en.wikipedia.org/wiki/Triangle_strip
 				}
-				*/
 
 				// VERTEX BUFFER
 				meshData.SetVertexBufferParams(meshVertices.Length, VertexPositionNormalUV.Attributes);
@@ -156,9 +112,9 @@ namespace CodeSmile.GraphMesh
 			mesh.RecalculateNormals();
 			mesh.RecalculateTangents();
 			//mesh.RecalculateUVDistributionMetrics();
-			mesh.Optimize();
+			//mesh.Optimize();
 
-			mesh.name = ToString();
+			//mesh.name = ToString();
 			return mesh;
 		}
 
@@ -182,21 +138,5 @@ namespace CodeSmile.GraphMesh
 				new() { attribute = VertexAttribute.TexCoord0, format = VertexAttributeFormat.Float32, dimension = 2, stream = 0 },
 			};
 		}
-
-		/*
-		public static bool IsClockwise(float3 p1, float3 p2, float3 p3)
-		{
-			var isClockWise = true;
-
-			var determinant = p1.x * p2.y + p3.x * p1.y + p2.x * p3.y -
-			                  p1.x * p3.y - p3.x * p2.y - p2.x * p1.y;
-			var determinant3d = math.determinant(new float3x3(p1, p2, p3));
-
-			if (determinant > 0f)
-				isClockWise = false;
-
-			return isClockWise;
-		}
-		*/
 	}
 }
