@@ -34,7 +34,7 @@ namespace CodeSmile.GraphMesh
 	/// Note: Implementation closely follows Blender's BMesh and its C# port UnityBMesh (which is not Job System compatible).
 	/// </summary>
 	[BurstCompile(OptimizeFor = OptimizeFor.Performance, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)]
-	public sealed partial class GMesh : IDisposable, ICloneable, IEquatable<GMesh>
+	public sealed partial class GMesh : IDisposable, IEquatable<GMesh>
 	{
 		/// <summary>
 		/// This is used to indicate that the index referencing another element hasn't been set yet.
@@ -74,7 +74,7 @@ namespace CodeSmile.GraphMesh
 		/// <summary>
 		/// Creates an empty GMesh.
 		/// </summary>
-		public GMesh() => _data = new GraphData(Allocator.Persistent);
+		public GMesh() => _data = new GraphData(true);
 
 		/// <summary>
 		/// Copy constructor. Creates an instance of GMesh that is the exact copy of another mesh.
@@ -97,12 +97,6 @@ namespace CodeSmile.GraphMesh
 			if (disposeInputArray)
 				vertexPositions.Dispose();
 		}
-
-		/// <summary>
-		/// Clones the instance, returns a new GMesh instance that is an exact copy.
-		/// </summary>
-		/// <param name="other"></param>
-		public object Clone() => new GMesh(this);
 
 		public bool Equals(GMesh other)
 		{

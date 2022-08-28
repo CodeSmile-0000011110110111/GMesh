@@ -26,10 +26,14 @@ namespace CodeSmile.GraphMesh
 #if GMESH_VALIDATION
 			ValidateVertexCollection(vertexIndices);
 #endif
-
-			Create.Edges(_data, vertexIndices, out var edgeIndices, Allocator.Temp);
+			
+			var vCount = vertexIndices.Length;
+			var edgeIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+			Create.Edges(_data, vertexIndices, ref edgeIndices);
+			
 			var faceIndex = Create.Face(_data, vertexIndices.Length);
 			Create.Loops(_data, faceIndex, vertexIndices, edgeIndices);
+			
 			edgeIndices.Dispose();
 			return faceIndex;
 		}
@@ -72,9 +76,15 @@ namespace CodeSmile.GraphMesh
 		/// Note: does not prevent creation of duplicate edges (two or more edges sharing the same vertices).
 		/// </summary>
 		/// <param name="vertexIndices"></param>
+		/// <param name="edgeIndices"></param>
+		/// <param name="allocator"></param>
 		/// <returns>indices of new edges</returns>
-		public void CreateEdges(in NativeArray<int> vertexIndices, out NativeArray<int> edgeIndices, Allocator allocator = Allocator.TempJob) =>
-			Create.Edges(_data, vertexIndices, out edgeIndices, allocator);
+		public void CreateEdges(in NativeArray<int> vertexIndices, out NativeArray<int> edgeIndices, Allocator allocator = Allocator.Temp)
+		{
+			var vCount = vertexIndices.Length;
+			edgeIndices = new NativeArray<int>(vCount, allocator, NativeArrayOptions.UninitializedMemory);
+			Create.Edges(_data, vertexIndices, ref edgeIndices);
+		}
 
 		/// <summary>
 		/// Creates a new vertex at the given position with optional normal.
@@ -271,13 +281,9 @@ namespace CodeSmile.GraphMesh
 				return edgeIndex;
 			}
 
-			public static void Edges(in GraphData data, in NativeArray<int> vertexIndices, out NativeArray<int> edgeIndices,
-				Allocator allocator = Allocator.TempJob)
+			public static void Edges(in GraphData data, in NativeArray<int> vertexIndices, ref NativeArray<int> edgeIndices)
 			{
-				var vCount = vertexIndices.Length;
-				edgeIndices = new NativeArray<int>(vCount, allocator, NativeArrayOptions.UninitializedMemory);
-
-				var iterCount = vCount - 1;
+				var iterCount = vertexIndices.Length - 1;
 				for (var i = 0; i < iterCount; i++)
 					edgeIndices[i] = Edge(data, vertexIndices[i], vertexIndices[i + 1]);
 

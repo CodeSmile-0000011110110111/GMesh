@@ -58,13 +58,9 @@ public class CreatePrimitivesTests
 			Validate.MeshElementCount(gMesh, 24, 96, 48, 26);
 			
 			using (var gMeshCopy1 = new GMesh(gMesh))
-			using (var gMeshCopy2 = gMeshCopy1.Clone() as GMesh)
 			{
 				Validate.MeshElementCount(gMeshCopy1, 24, 96, 48, 26);
-				Validate.MeshElementCount(gMeshCopy2, 24, 96, 48, 26);
 				Assert.IsFalse(gMeshCopy1.Equals(gMesh));
-				Assert.IsFalse(gMeshCopy2.Equals(gMesh));
-				Assert.IsFalse(gMeshCopy1.Equals(gMeshCopy2));
 			}
 		}
 	}

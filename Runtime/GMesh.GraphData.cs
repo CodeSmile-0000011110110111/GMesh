@@ -3,8 +3,8 @@
 
 using System;
 using Unity.Burst;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
-using UnityEngine;
 
 namespace CodeSmile.GraphMesh
 {
@@ -262,20 +262,19 @@ namespace CodeSmile.GraphMesh
 			/// Note that indiscriminately calling Dispose() multiple times will throw an exception.
 			/// </summary>
 			/// <value></value>
-			public bool IsDisposed =>
-				!(_elementCounts.IsCreated && _vertices.IsCreated && _edges.IsCreated && _loops.IsCreated && _faces.IsCreated);
+			public bool IsDisposed => _elementCounts.IsCreated == false;
 
-			public GraphData(AllocatorManager.AllocatorHandle allocator)
+			public GraphData(bool bogusParameterBecauseStructsCantHaveParameterlessConstructor)
 			{
-				_elementCounts = new NativeArray<int>((int)Element.Count, allocator.ToAllocator);
-				_vertices = new NativeList<Vertex>(allocator);
-				_edges = new NativeList<Edge>(allocator);
-				_loops = new NativeList<Loop>(allocator);
-				_faces = new NativeList<Face>(allocator);
+				_elementCounts = new NativeArray<int>((int)Element.Count, Allocator.Persistent);
+				_vertices = new NativeList<Vertex>(Allocator.Persistent);
+				_edges = new NativeList<Edge>(Allocator.Persistent);
+				_loops = new NativeList<Loop>(Allocator.Persistent);
+				_faces = new NativeList<Face>(Allocator.Persistent);
 			}
 
 			internal GraphData(GraphData other)
-				: this(Allocator.Persistent)
+				: this(true)
 			{
 				_elementCounts.CopyFrom(other._elementCounts);
 				_vertices.CopyFrom(other._vertices);
@@ -319,7 +318,7 @@ namespace CodeSmile.GraphMesh
 			internal int AddVertex(ref Vertex vertex)
 			{
 				vertex.Index = NextVertexIndex;
-				if (vertex.Index < _vertices.Length) SetVertex(vertex);
+				if (Hint.Likely(vertex.Index < _vertices.Length)) SetVertex(vertex);
 				else _vertices.Add(vertex);
 				VertexCount++;
 				return vertex.Index;
@@ -328,7 +327,7 @@ namespace CodeSmile.GraphMesh
 			internal int AddEdge(ref Edge edge)
 			{
 				edge.Index = NextEdgeIndex;
-				if (edge.Index < _edges.Length) SetEdge(edge);
+				if (Hint.Likely(edge.Index < _edges.Length)) SetEdge(edge);
 				else _edges.Add(edge);
 				EdgeCount++;
 				return edge.Index;
@@ -337,7 +336,7 @@ namespace CodeSmile.GraphMesh
 			internal void AddLoop(ref Loop loop)
 			{
 				loop.Index = NextLoopIndex;
-				if (loop.Index < _loops.Length) SetLoop(loop);
+				if (Hint.Likely(loop.Index < _loops.Length)) SetLoop(loop);
 				else _loops.Add(loop);
 				LoopCount++;
 			}
@@ -345,7 +344,7 @@ namespace CodeSmile.GraphMesh
 			internal int AddFace(ref Face face)
 			{
 				face.Index = NextFaceIndex;
-				if (face.Index < _faces.Length) SetFace(face);
+				if (Hint.Likely(face.Index < _faces.Length)) SetFace(face);
 				else _faces.Add(face);
 				FaceCount++;
 				return face.Index;
