@@ -66,7 +66,9 @@ namespace CodeSmile.GraphMesh
 				var inputMesh = inputMeshes[meshIndex];
 				var data = new NativeArray<JCombine.MergeData>(inputMesh.LoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 				var job = new JCombine.GatherDataJob
-					{ CombineData = data, Faces = inputMesh.Faces, Loops = inputMesh.Loops, Vertices = inputMesh.Vertices };
+				{
+					CombineData = data, MeshIndex = meshIndex, Faces = inputMesh.Faces, Loops = inputMesh.Loops, Vertices = inputMesh.Vertices,
+				};
 				gatherData[meshIndex] = data;
 				gatherHandles[meshIndex] = job.Schedule(inputMesh.LoopCount, 1);
 			}
@@ -106,7 +108,7 @@ namespace CodeSmile.GraphMesh
 			var createVertsJob = new JCombine.CreateVerticesJob
 			{
 				Data = combinedMesh._data, CombinedData = combinedData, CombinedVertexIndices = combinedVertexIndices,
-				KnownGridPositions = knownGridPositions, TotalFaceCount = totalFaceCount, TotalLoopCount = totalLoopCount
+				KnownGridPositions = knownGridPositions, TotalFaceCount = totalFaceCount, TotalLoopCount = totalLoopCount,
 			};
 
 			var createVertsHandle = createVertsJob.Schedule();
@@ -141,24 +143,26 @@ namespace CodeSmile.GraphMesh
 				public void Execute()
 				{
 					// TODO: maybe IJob(Parallel)For ? Takes 80% of the time ...
-					
+
 					var combinedDataLength = CombinedData.Length;
 					var currentElementCount = CombinedData[0].FaceElementCount;
 					var vertexIndices = new NativeArray<int>(currentElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 					var edgeIndices = new NativeArray<int>(currentElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 					var vertexIndex = 0;
+					var currentMeshIndex = 0;
 					var currentFaceIndex = 0;
 
 					for (var i = 0; i < combinedDataLength; i++)
 					{
 						var faceData = CombinedData[i];
-						if (Hint.Unlikely(faceData.FaceIndex != currentFaceIndex))
+						if (Hint.Unlikely(faceData.FaceIndex != currentFaceIndex || faceData.MeshIndex != currentMeshIndex))
 						{
 							// create the new face with collected vertices
 							Create.Edges(Data, vertexIndices, ref edgeIndices);
 							Create.Loops(Data, Create.Face(Data, currentElementCount), vertexIndices, edgeIndices);
 
 							// reset face elements
+							currentMeshIndex = faceData.MeshIndex;
 							currentFaceIndex = faceData.FaceIndex;
 							vertexIndex = 0;
 
@@ -169,7 +173,8 @@ namespace CodeSmile.GraphMesh
 								edgeIndices.Dispose();
 
 								currentElementCount = faceData.FaceElementCount;
-								vertexIndices = new NativeArray<int>(currentElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+								vertexIndices = new NativeArray<int>(currentElementCount, Allocator.Temp,
+									NativeArrayOptions.UninitializedMemory);
 								edgeIndices = new NativeArray<int>(currentElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 							}
 						}
@@ -235,6 +240,8 @@ namespace CodeSmile.GraphMesh
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Loop>.ReadOnly Loops;
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Vertex>.ReadOnly Vertices;
 
+				public int MeshIndex;
+
 				public void Execute(int loopIndex)
 				{
 					var loop = Loops[loopIndex];
@@ -252,7 +259,7 @@ namespace CodeSmile.GraphMesh
 							var v = Vertices[loop.StartVertexIndex];
 							CombineData[loopIndex + iterCount] = new MergeData
 							{
-								FaceIndex = faceIndex, FaceElementCount = elementCount, VertexPosition = v.Position,
+								MeshIndex = MeshIndex, FaceIndex = faceIndex, FaceElementCount = elementCount, VertexPosition = v.Position,
 								VertexGridPosHash = math.hash(v.GridPosition()),
 							};
 
@@ -266,6 +273,7 @@ namespace CodeSmile.GraphMesh
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct MergeData
 			{
+				public int MeshIndex;
 				public int FaceIndex;
 				public int FaceElementCount;
 				public uint VertexGridPosHash;
