@@ -51,28 +51,6 @@ namespace CodeSmile.GraphMesh
 		public int ValidFaceCount => _data.ValidFaceCount;
 
 		/// <summary>
-		/// Check if the GMesh needs disposing. For the poor developer who got confused. :)
-		/// No seriously, it can be useful from time to time to just check whether you still have to or not.
-		/// 
-		/// Rule: after you are done using a GMesh instance you need to manually call Dispose() on it.
-		/// In convoluted code this can easily be cumbersome so I decided to add this check.
-		/// Note that indiscriminately calling Dispose() multiple times will throw an exception.
-		/// </summary>
-		/// <value></value>
-		public bool IsDisposed => _data.IsDisposed;
-
-		/// <summary>
-		/// Disposes internal native collections and invalidates the graph.
-		/// Calling Get/Set/Create/etc methods after Dispose() causes exceptions!
-		/// Failure to call Dispose() in time will result in a big fat ugly Console error message to let you know about the mess you made. :)
-		/// Calling Dispose() more than once will throw an InvalidOperationException.
-		/// 
-		/// Note: native collections cannot be disposed of automatically in the Finalizer, see:
-		/// https://forum.unity.com/threads/why-disposing-nativearray-in-a-finalizer-is-unacceptable.531494/
-		/// </summary>
-		public void Dispose() => _data.Dispose();
-
-		/// <summary>
 		/// Gets a vertex by its index. Does not check whether element has been invalidated (Index == UnsetIndex).
 		/// </summary>
 		/// <param name="index"></param>
@@ -218,55 +196,21 @@ namespace CodeSmile.GraphMesh
 			private NativeList<Loop> _loops;
 			private NativeList<Face> _faces;
 
-			internal NativeArray<Vertex> VerticesArray => _vertices;
+			internal NativeArray<Vertex> VerticesAsWritableArray => _vertices.AsArray();
 
-			/// <summary>
-			/// The read-only collection of vertices.
-			/// </summary>
 			public NativeArray<Vertex>.ReadOnly Vertices => _vertices.AsParallelReader();
-			/// <summary>
-			/// The read-only collection of edges.
-			/// </summary>
 			public NativeArray<Edge>.ReadOnly Edges => _edges.AsParallelReader();
-			/// <summary>
-			/// The read-only collection of loops.
-			/// </summary>
 			public NativeArray<Loop>.ReadOnly Loops => _loops.AsParallelReader();
-			/// <summary>
-			/// The read-only collection of faces.
-			/// </summary>
 			public NativeArray<Face>.ReadOnly Faces => _faces.AsParallelReader();
 
-			/// <summary>
-			/// Number of vertices in the mesh.
-			/// </summary>
 			public int ValidVertexCount
 			{
 				get => _elementCounts[(int)Element.Vertex];
 				internal set => _elementCounts[(int)Element.Vertex] = value;
 			}
-			/// <summary>
-			/// Number of edges in the mesh.
-			/// </summary>
 			public int ValidEdgeCount { get => _elementCounts[(int)Element.Edge]; internal set => _elementCounts[(int)Element.Edge] = value; }
-			/// <summary>
-			/// Number of loops in the mesh.
-			/// </summary>
 			public int ValidLoopCount { get => _elementCounts[(int)Element.Loop]; internal set => _elementCounts[(int)Element.Loop] = value; }
-			/// <summary>
-			/// Number of faces in the mesh.
-			/// </summary>
 			public int ValidFaceCount { get => _elementCounts[(int)Element.Face]; internal set => _elementCounts[(int)Element.Face] = value; }
-
-			/// <summary>
-			/// Check if the GMesh needs disposing. For developers who get easily confused. :)
-			/// 
-			/// Rule: after you are done using a GMesh instance you need to manually call Dispose() on it.
-			/// In convoluted code this can easily be cumbersome so I decided to add this check.
-			/// Note that indiscriminately calling Dispose() multiple times will throw an exception.
-			/// </summary>
-			/// <value></value>
-			public bool IsDisposed => _elementCounts.IsCreated == false;
 
 			public GraphData(bool bogusParameterBecauseStructsCantHaveParameterlessConstructor)
 			{
@@ -286,6 +230,8 @@ namespace CodeSmile.GraphMesh
 				_loops.CopyFrom(other._loops);
 				_faces.CopyFrom(other._faces);
 			}
+
+			public bool IsDisposed => _elementCounts.IsCreated == false;
 
 			public void Dispose()
 			{

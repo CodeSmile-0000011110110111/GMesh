@@ -44,15 +44,17 @@ namespace CodeSmile.GraphMesh
 			if (totalFaceCount == 0)
 				throw new InvalidOperationException("input meshes do not have a single face");
 
-			var gMesh = CombineInternalJobified(inputMeshes, totalFaceCount, totalLoopCount);
+			var (gMesh, jobHandle) = CombineInternalJobified(inputMeshes, totalFaceCount, totalLoopCount);
 
 			if (disposeInputMeshes)
 				DisposeAll(inputMeshes);
 
+			jobHandle.Complete();
+			
 			return gMesh;
 		}
 
-		private static GMesh CombineInternalJobified(IList<GMesh> inputMeshes, int totalFaceCount, int totalLoopCount)
+		private static (GMesh, JobHandle) CombineInternalJobified(IList<GMesh> inputMeshes, int totalFaceCount, int totalLoopCount)
 		{
 			// ===============================================================================================================================
 			// GATHER FACE + VERTEX DATA FROM INPUT MESHES
@@ -64,7 +66,8 @@ namespace CodeSmile.GraphMesh
 			for (var meshIndex = 0; meshIndex < meshCount; meshIndex++)
 			{
 				var inputMesh = inputMeshes[meshIndex];
-				var data = new NativeArray<JCombine.MergeData>(inputMesh.ValidLoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+				var data = new NativeArray<JCombine.MergeData>(inputMesh.ValidLoopCount, Allocator.TempJob,
+					NativeArrayOptions.UninitializedMemory);
 				var job = new JCombine.GatherDataJob
 				{
 					CombineData = data, MeshIndex = meshIndex, Faces = inputMesh.Faces, Loops = inputMesh.Loops, Vertices = inputMesh.Vertices,
@@ -74,12 +77,10 @@ namespace CodeSmile.GraphMesh
 			}
 
 			var combinedGatherHandle = JobHandle.CombineDependencies(gatherHandles);
-			gatherHandles.Dispose();
 
 			// ===============================================================================================================================
 			// COPY GATHERED DATA INTO SINGLE ARRAY
 			// ===============================================================================================================================
-			// TODO: copy in a job? it's only 1/80th of total time though in my test case
 			// combine all mesh data into one array
 			var combinedData = new NativeArray<JCombine.MergeData>(totalLoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			var dstIndex = 0;
@@ -112,8 +113,6 @@ namespace CodeSmile.GraphMesh
 			};
 
 			var createVertsHandle = createVertsJob.Schedule();
-			knownGridPositions.Dispose(createVertsHandle);
-			createVertsHandle.Complete();
 
 			// ===============================================================================================================================
 			// CREATE COMBINED MESH FACES
@@ -121,28 +120,30 @@ namespace CodeSmile.GraphMesh
 
 			var createFacesJob = new JCombine.CreateFacesJob
 				{ Data = combinedMesh._data, CombinedData = combinedData, CombinedVertexIndices = combinedVertexIndices };
-			var createFacesHandle = createFacesJob.Schedule();
+			var createFacesHandle = createFacesJob.Schedule(createVertsHandle);
+			
+			gatherHandles.Dispose();
+			knownGridPositions.Dispose(createVertsHandle);
 			combinedData.Dispose(createFacesHandle);
 			combinedVertexIndices.Dispose(createFacesHandle);
-			createFacesHandle.Complete();
 
-			return combinedMesh;
+			return (combinedMesh, createFacesHandle);
 		}
 
 		[BurstCompile]
 		private static class JCombine
 		{
-			[BurstCompile]
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct CreateFacesJob : IJob
 			{
-				public NativeArray<MergeData> CombinedData;
-				public NativeArray<int> CombinedVertexIndices;
+				[ReadOnly] public NativeArray<MergeData> CombinedData;
+				[ReadOnly] public NativeArray<int> CombinedVertexIndices;
 
 				public GraphData Data;
 
 				public void Execute()
 				{
-					// TODO: maybe IJob(Parallel)For ? Takes 80% of the time ...
+					// TODO: maybe IJob(Parallel)For ? Takes 80% of the Combine() time ...
 
 					var combinedDataLength = CombinedData.Length;
 					var currentElementCount = CombinedData[0].FaceElementCount;
@@ -152,7 +153,7 @@ namespace CodeSmile.GraphMesh
 					var currentMeshIndex = 0;
 					var currentFaceIndex = 0;
 
-					for (var i = 0; i < combinedDataLength; i++)
+					for (var i = 0; Hint.Likely(i < combinedDataLength); i++)
 					{
 						var faceData = CombinedData[i];
 						if (Hint.Unlikely(faceData.FaceIndex != currentFaceIndex || faceData.MeshIndex != currentMeshIndex))
@@ -180,8 +181,7 @@ namespace CodeSmile.GraphMesh
 						}
 
 						// get the face's vertex indices based on their grid positions
-						vertexIndices[vertexIndex] = CombinedVertexIndices[i];
-						vertexIndex++;
+						vertexIndices[vertexIndex++] = CombinedVertexIndices[i];
 					}
 
 					// create the last face
@@ -193,12 +193,12 @@ namespace CodeSmile.GraphMesh
 				}
 			}
 
-			[BurstCompile]
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct CreateVerticesJob : IJob
 			{
-				public NativeArray<MergeData> CombinedData;
+				[ReadOnly] public NativeArray<MergeData> CombinedData;
 				public NativeParallelHashMap<uint, int> KnownGridPositions;
-				public NativeArray<int> CombinedVertexIndices;
+				[WriteOnly] public NativeArray<int> CombinedVertexIndices;
 
 				public int TotalFaceCount;
 				public int TotalLoopCount;
@@ -213,7 +213,7 @@ namespace CodeSmile.GraphMesh
 					Data.InitializeFacesWithSize(TotalFaceCount);
 
 					var combinedDataLength = CombinedData.Length;
-					for (var i = 0; i < combinedDataLength; i++)
+					for (var i = 0; Hint.Likely(i < combinedDataLength); i++)
 					{
 						var data = CombinedData[i];
 
@@ -231,7 +231,7 @@ namespace CodeSmile.GraphMesh
 				}
 			}
 
-			[BurstCompile]
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct GatherDataJob : IJobParallelFor
 			{
 				[WriteOnly] [NativeDisableParallelForRestriction] public NativeArray<MergeData> CombineData;
@@ -250,22 +250,18 @@ namespace CodeSmile.GraphMesh
 
 					if (Hint.Unlikely(face.FirstLoopIndex == loopIndex) && Hint.Likely(face.IsValid))
 					{
-						var iterCount = 0;
 						var elementCount = face.ElementCount;
-
-						do
+						for (int i = 0; Hint.Likely(i < elementCount); i++)
 						{
 							// loop vertex is guaranteed to be the origin vertex for this loop
 							var v = Vertices[loop.StartVertexIndex];
-							CombineData[loopIndex + iterCount] = new MergeData
+							CombineData[loopIndex + i] = new MergeData
 							{
 								MeshIndex = MeshIndex, FaceIndex = faceIndex, FaceElementCount = elementCount, VertexPosition = v.Position,
 								VertexGridPosHash = math.hash(v.GridPosition()),
 							};
-
 							loop = Loops[loop.NextLoopIndex];
-							iterCount++;
-						} while (Hint.Likely(iterCount < elementCount));
+						}
 					}
 				}
 			}

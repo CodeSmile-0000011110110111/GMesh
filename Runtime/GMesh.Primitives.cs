@@ -3,7 +3,6 @@
 
 using System;
 using Unity.Collections;
-using UnityEngine;
 using static Unity.Mathematics.math;
 using float3 = Unity.Mathematics.float3;
 
@@ -43,7 +42,7 @@ namespace CodeSmile.GraphMesh
 			vertices[0] = float3(-.5f, 0f, -.5f) * scale;
 			vertices[1] = float3(-.5f, 0f, .5f) * scale;
 			vertices[2] = float3(.5f, 0f, .5f) * scale;
-			vertices[3] = float3(.5f, 0f, -.5f) * scale ;
+			vertices[3] = float3(.5f, 0f, -.5f) * scale;
 			return new GMesh(vertices, true);
 		}
 

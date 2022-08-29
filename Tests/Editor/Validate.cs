@@ -298,7 +298,7 @@ public static class Validate
 		var foundUs = 0;
 		Assert.DoesNotThrow(() =>
 		{
-			gMesh.ForEachEdge(vertexIndex, e =>
+			gMesh.ForEachEdge(gMesh.GetVertex(vertexIndex), e =>
 			{
 				Assert.IsTrue(e.ContainsVertex(vertexIndex), $"edge in disk cycle does not contain the vertex {vertexIndex}: {e}");
 

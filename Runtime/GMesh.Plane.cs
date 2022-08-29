@@ -13,7 +13,13 @@ namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
-		private JobHandle ScheduleCreatePlane(GMeshPlane parameters)
+		/// <summary>
+		/// Schedules jobs that create a plane based on input parameters.
+		/// Caller is responsible for calling Complete() on the returned JobHandle.
+		/// </summary>
+		/// <param name="parameters"></param>
+		/// <returns></returns>
+		public JobHandle ScheduleCreatePlane(GMeshPlane parameters)
 		{
 			var vertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY);
 			var vertsJob = new JPlane.CreatePlaneVerticesJob
@@ -49,7 +55,7 @@ namespace CodeSmile.GraphMesh
 					// set expected number of vertices directly
 					data.ValidVertexCount = expectedVertexCount;
 					data.InitializeVerticesWithSize(expectedVertexCount);
-					Vertices = data.VerticesArray;
+					Vertices = data.VerticesAsWritableArray;
 
 					transform = new RigidTransform(quaternion.Euler(radians(Rotation)), Translation);
 					var subdivisions = PlaneVertexCount - 1;

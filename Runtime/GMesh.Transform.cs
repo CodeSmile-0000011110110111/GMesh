@@ -4,6 +4,7 @@
 using System;
 using System.Runtime.InteropServices;
 using Unity.Burst;
+using Unity.Burst.CompilerServices;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -21,24 +22,12 @@ namespace CodeSmile.GraphMesh
 		/// Applies the transformation to all vertices with the Pivot as the center.
 		/// </summary>
 		/// <param name="transform"></param>
-		public void ApplyTransform(in Transform transform)
-		{
-			// FIXME: implement using Jobs since this is very Burst-friendly
-			var rigidTransform = transform.ToRigidTransform();
-			for (var i = 0; i < Vertices.Length; i++)
-			{
-				var vertex = GetVertex(i);
-				var vPos = vertex.Position;
-				// TODO: respect the pivot ...
-				vertex.Position = math.transform(rigidTransform, vPos) * transform.Scale;
-				SetVertex(vertex);
-			}
-		}
+		public void ApplyTransform(in Transform transform) => Transform.Apply(_data, transform);
 
 		/// <summary>
 		/// GMesh transform representation.
 		/// </summary>
-		[BurstCompile] [Serializable] [StructLayout(LayoutKind.Sequential)]
+		[BurstCompile] [StructLayout(LayoutKind.Sequential)] [Serializable]
 		public struct Transform
 		{
 			[Tooltip("Offset from origin (0,0,0)")]
@@ -48,6 +37,20 @@ namespace CodeSmile.GraphMesh
 			[Tooltip("Scale is self-explanatory")]
 			public float3 Scale;
 
+			internal static void Apply(in GraphData data, in Transform t)
+			{
+				var rigidTransform = t.AsRigidTransform();
+				var vCount = data.Vertices.Length;
+				for (var i = 0; Hint.Likely(i < vCount); i++)
+				{
+					var vertex = data.GetVertex(i);
+					var vPos = vertex.Position;
+					// TODO: respect the pivot ...
+					vertex.Position = math.transform(rigidTransform, vPos) * t.Scale;
+					data.SetVertex(vertex);
+				}
+			}
+
 			public Transform(float3 translation, float3 rotation, float3 scale)
 			{
 				Translation = translation;
@@ -55,7 +58,7 @@ namespace CodeSmile.GraphMesh
 				Scale = scale;
 			}
 
-			public RigidTransform ToRigidTransform() => new(quaternion.Euler(math.radians(Rotation)), Translation);
+			public RigidTransform AsRigidTransform() => new(quaternion.Euler(math.radians(Rotation)), Translation);
 		}
 	}
 }

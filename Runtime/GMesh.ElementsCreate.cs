@@ -1,11 +1,9 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
-using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace CodeSmile.GraphMesh
@@ -24,16 +22,16 @@ namespace CodeSmile.GraphMesh
 		public int CreateFace(in NativeArray<int> vertexIndices)
 		{
 #if GMESH_VALIDATION
-			ValidateVertexCollection(vertexIndices);
+			Validate.VertexCollection(vertexIndices);
 #endif
-			
+
 			var vCount = vertexIndices.Length;
 			var edgeIndices = new NativeArray<int>(vCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 			Create.Edges(_data, vertexIndices, ref edgeIndices);
-			
+
 			var faceIndex = Create.Face(_data, vertexIndices.Length);
 			Create.Loops(_data, faceIndex, vertexIndices, edgeIndices);
-			
+
 			edgeIndices.Dispose();
 			return faceIndex;
 		}
@@ -49,7 +47,7 @@ namespace CodeSmile.GraphMesh
 		public int CreateFace(in NativeArray<float3> vertexPositions)
 		{
 #if GMESH_VALIDATION
-			ValidateVertexCollection(vertexPositions);
+			Validate.VertexCollection(vertexPositions);
 #endif
 
 			Create.Vertices(_data, vertexPositions, out var vertexIndices, Allocator.Temp);
@@ -311,197 +309,6 @@ namespace CodeSmile.GraphMesh
 				vertexIndices = new NativeArray<int>(vCount, allocator, NativeArrayOptions.UninitializedMemory);
 				for (var i = 0; i < vCount; i++)
 					vertexIndices[i] = Vertex(data, positions[i]);
-			}
-		}
-
-		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-		private struct CreateLoopsJob : IJobFor
-		{
-			//[ReadOnly] public NativeList<Vertex> vertices;
-			public NativeList<Edge> edges;
-			public NativeList<Loop> loops;
-			public NativeList<Face> faces;
-			[ReadOnly] public NativeArray<int> vertexIndices;
-			[ReadOnly] public NativeArray<int> edgeIndices;
-
-			public readonly int faceIndex;
-
-			//private Vertex GetVertex(int index) => vertices[index];
-			//private void SetVertex(in Vertex vertex) => vertices[vertex.Index] = vertex;
-			private Edge GetEdge(int index) => edges[index];
-			private void SetEdge(in Edge edge) => edges[edge.Index] = edge;
-			private Loop GetLoop(int index) => loops[index];
-			private void SetLoop(in Loop loop) => loops[loop.Index] = loop;
-			private Face GetFace(int index) => faces[index];
-			private void SetFace(in Face face) => faces[face.Index] = face;
-
-			private void AddLoop(ref Loop loop)
-			{
-				loop.Index = loops.Length;
-				loops.Add(loop);
-			}
-
-			public void Execute(int index)
-			{
-				var edgeIndex = edgeIndices[index];
-				var vertexIndex = vertexIndices[index];
-				var newLoopIndex = loops.Length;
-				var (prevRadialIdx, nextRadialIdx) = CreateLoopInternal_UpdateRadialLoopCycle(newLoopIndex, edgeIndex);
-				var (prevLoopIdx, nextLoopIdx) = CreateLoopInternal_UpdateLoopCycle(newLoopIndex, faceIndex);
-				//var loop = Loop.Create(faceIndex, edgeIndex, vertexIndex, prevRadialIdx, nextRadialIdx, prevLoopIdx, nextLoopIdx);
-				var loop = new Loop
-				{
-					FaceIndex = faceIndex, EdgeIndex = edgeIndex, StartVertexIndex = vertexIndex,
-					PrevLoopIndex = prevLoopIdx, NextLoopIndex = nextLoopIdx,
-					PrevRadialLoopIndex = prevRadialIdx, NextRadialLoopIndex = nextRadialIdx,
-				};
-				AddLoop(ref loop);
-			}
-
-			private (int, int) CreateLoopInternal_UpdateRadialLoopCycle(int newLoopIndex, int edgeIndex)
-			{
-				var prevRadialLoopIndex = newLoopIndex;
-				var nextRadialLoopIndex = newLoopIndex;
-
-				var edge = GetEdge(edgeIndex);
-				if (Hint.Unlikely(edge.BaseLoopIndex == UnsetIndex))
-					edge.BaseLoopIndex = newLoopIndex;
-				else
-				{
-					var edgeBaseLoop = GetLoop(edge.BaseLoopIndex);
-					prevRadialLoopIndex = edgeBaseLoop.Index;
-					nextRadialLoopIndex = edgeBaseLoop.NextRadialLoopIndex;
-
-					if (Hint.Likely(edgeBaseLoop.NextRadialLoopIndex == edgeBaseLoop.Index))
-						edgeBaseLoop.PrevRadialLoopIndex = newLoopIndex;
-					else
-					{
-						var nextRadialLoop = GetLoop(edgeBaseLoop.NextRadialLoopIndex);
-						nextRadialLoop.PrevRadialLoopIndex = newLoopIndex;
-						SetLoop(nextRadialLoop);
-					}
-
-					edgeBaseLoop.NextRadialLoopIndex = newLoopIndex;
-					SetLoop(edgeBaseLoop);
-				}
-
-				SetEdge(edge);
-
-				return (prevRadialLoopIndex, nextRadialLoopIndex);
-			}
-
-			private (int, int) CreateLoopInternal_UpdateLoopCycle(int newLoopIndex, int faceIndex)
-			{
-				var prevLoopIndex = newLoopIndex;
-				var nextLoopIndex = newLoopIndex;
-
-				var face = GetFace(faceIndex);
-				if (Hint.Unlikely(face.FirstLoopIndex == UnsetIndex))
-				{
-					face.FirstLoopIndex = newLoopIndex;
-					SetFace(face);
-				}
-				else
-				{
-					var firstLoop = GetLoop(face.FirstLoopIndex);
-					nextLoopIndex = firstLoop.Index;
-					prevLoopIndex = firstLoop.PrevLoopIndex;
-
-					var prevLoop = GetLoop(prevLoopIndex);
-					prevLoop.NextLoopIndex = newLoopIndex;
-
-					// update nextLoop or re-assign it as firstLoop, depends on whether they are the same
-					if (Hint.Likely(prevLoopIndex != nextLoopIndex))
-						SetLoop(prevLoop);
-					else
-						firstLoop = prevLoop;
-
-					firstLoop.PrevLoopIndex = newLoopIndex;
-					SetLoop(firstLoop);
-				}
-
-				return (prevLoopIndex, nextLoopIndex);
-			}
-		}
-
-		[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-		private struct UpdateEdgeCycleJob : IJob
-		{
-			public NativeList<Vertex> vertices;
-			public NativeList<Edge> edges;
-			public Edge edge;
-			public readonly int v0Index;
-			public readonly int v1Index;
-
-			private Vertex GetVertex(int index) => vertices[index];
-			private void SetVertex(in Vertex vertex) => vertices[vertex.Index] = vertex;
-			private Edge GetEdge(int index) => edges[index];
-			private void SetEdge(in Edge edge) => edges[edge.Index] = edge;
-
-			public void Execute()
-			{
-				var edgeIndex = edge.Index;
-
-				// Vertex 0
-				{
-					var v0 = GetVertex(v0Index);
-					if (Hint.Unlikely(v0.BaseEdgeIndex == UnsetIndex))
-					{
-						v0.BaseEdgeIndex = edge.APrevEdgeIndex = edge.ANextEdgeIndex = edgeIndex;
-						SetVertex(v0);
-					}
-					else
-					{
-						var v0BaseEdge = GetEdge(v0.BaseEdgeIndex);
-						edge.APrevEdgeIndex = v0.BaseEdgeIndex;
-						edge.ANextEdgeIndex = v0BaseEdge.GetNextEdgeIndex(v0Index);
-
-						var v0PrevEdge = GetEdge(edge.APrevEdgeIndex);
-						v0PrevEdge.SetNextEdgeIndex(v0Index, edgeIndex);
-						SetEdge(v0PrevEdge);
-
-						var v0NextEdge = GetEdge(edge.ANextEdgeIndex);
-						v0NextEdge.SetPrevEdgeIndex(v0Index, edgeIndex);
-						SetEdge(v0NextEdge);
-
-						// FIX: update prev edge vertex1's edge index of v0 and v1 base edges both point to prev edge.
-						// This occurs when v0 and v1 were the first vertices to be connected with an edge.
-						var prevEdgeVertex0 = GetVertex(v0BaseEdge.AVertexIndex);
-						if (Hint.Unlikely(prevEdgeVertex0.BaseEdgeIndex == v0.BaseEdgeIndex))
-						{
-							v0.BaseEdgeIndex = edgeIndex;
-							SetVertex(v0);
-						}
-					}
-				}
-
-				// Vertex 1
-				{
-					var v1 = GetVertex(v1Index);
-					if (Hint.Unlikely(v1.BaseEdgeIndex == UnsetIndex))
-					{
-						// Note: the very first edge between two vertices will set itself as BaseEdgeIndex on both vertices.
-						// This is expected behaviour and is "fixed" when the next edge connects to V1 and detects that.
-						v1.BaseEdgeIndex = edge.OPrevEdgeIndex = edge.ONextEdgeIndex = edgeIndex;
-						SetVertex(v1);
-					}
-					else
-					{
-						var v1BaseEdge = GetEdge(v1.BaseEdgeIndex);
-						edge.OPrevEdgeIndex = v1.BaseEdgeIndex;
-						edge.ONextEdgeIndex = v1BaseEdge.GetNextEdgeIndex(v1Index);
-
-						var v1PrevEdge = GetEdge(edge.OPrevEdgeIndex);
-						v1PrevEdge.SetNextEdgeIndex(v1Index, edgeIndex);
-						SetEdge(v1PrevEdge);
-
-						var v1NextEdge = GetEdge(edge.ONextEdgeIndex);
-						v1NextEdge.SetPrevEdgeIndex(v1Index, edgeIndex);
-						SetEdge(v1NextEdge);
-					}
-				}
-
-				SetEdge(edge);
 			}
 		}
 	}

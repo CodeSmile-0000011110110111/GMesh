@@ -117,7 +117,5 @@ namespace CodeSmile.GraphMesh
 			hashCode.Add(_data);
 			return hashCode.ToHashCode();
 		}
-
-		~GMesh() => OnFinalizeVerifyCollectionsAreDisposed();
 	}
 }

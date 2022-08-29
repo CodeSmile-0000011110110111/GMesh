@@ -50,7 +50,7 @@ namespace CodeSmile.GraphMesh
 				return UnsetIndex;
 
 			// prefer the vertex that's pointing to the split edge to remain with split edge
-			GetVerticesPreferBaseEdgeVertex(splitEdge, out var keepVert, out var otherVert);
+			SplitEdgeInternal_GetVerticesPreferBaseEdgeVertex(splitEdge, out var keepVert, out var otherVert);
 			SplitEdgeInternal_CreateEdgeAndVertex(pos, otherVert.Index, out var insertedEdge, out var newVert);
 			// in case both edge vertices' BaseEdge point to the splitEdge
 			SplitEdgeInternal_UpdateOtherVertexBaseEdgeIfNeeded(ref otherVert, splitEdge.Index, insertedEdge.Index);
@@ -71,6 +71,14 @@ namespace CodeSmile.GraphMesh
 #endif
 
 			return insertedEdge.Index;
+		}
+
+		private void SplitEdgeInternal_GetVerticesPreferBaseEdgeVertex(in Edge edge, out Vertex baseVertex, out Vertex otherVertex)
+		{
+			var vertexA = GetVertex(edge.AVertexIndex);
+			var vertexO = GetVertex(edge.OVertexIndex);
+			baseVertex = edge.Index == vertexA.BaseEdgeIndex ? vertexA : vertexO;
+			otherVertex = baseVertex.Index == vertexO.Index ? vertexA : vertexO;
 		}
 
 		private void SplitEdgeInternal_ReconnectEdges(ref Edge splitEdge, ref Edge insertedEdge, int newVertIndex, int keepVertIndex,
@@ -130,7 +138,7 @@ namespace CodeSmile.GraphMesh
 				splitEdgeOppositeLoop = tempLoop;
 			}
 
-			var insertedLoop1 = CreateAndInsertLoop(ref splitEdgeLoop, ref insertedEdge, newVertexIndex);
+			var insertedLoop1 = InsertLoop(ref splitEdgeLoop, ref insertedEdge, newVertexIndex);
 
 			// FIXME: assumption that there will only be at most two loops around an edge
 			// check if we need to split the loop on the other side, too
@@ -139,7 +147,7 @@ namespace CodeSmile.GraphMesh
 				splitEdgeOppositeLoop.EdgeIndex = insertedEdge.Index;
 				insertedEdge.BaseLoopIndex = splitEdgeOppositeLoop.Index;
 
-				var insertedLoop2 = CreateAndInsertLoop(ref splitEdgeOppositeLoop, ref splitEdge, newVertexIndex);
+				var insertedLoop2 = InsertLoop(ref splitEdgeOppositeLoop, ref splitEdge, newVertexIndex);
 				insertedLoop1.SetRadialLoopIndices(splitEdgeOppositeLoop.Index);
 				insertedLoop2.SetRadialLoopIndices(splitEdgeLoop.Index);
 				splitEdgeLoop.SetRadialLoopIndices(insertedLoop2.Index);
@@ -163,81 +171,5 @@ namespace CodeSmile.GraphMesh
 			newVertex.BaseEdgeIndex = insertedEdge.Index;
 			SetVertex(newVertex);
 		}
-
-
-
-
-
-
-
-		/*
-		 * JOIN EDGE KILL VERT:
-		 * Takes a pointer to an edge (ke) and pointer to one of its vertices (kv) and collapses
-		 * the edge on that vertex. First ke is removed from the disk cycle of both kv and tv.
-		 * Then the edge oe is relinked to run between ov and tv and is added to the disk cycle of ov.
-		 * Finally the radial cycle of oe is traversed and all of its face loops are updated.
-		 * Note that in order for this euler to work, kv must have exactly only two edges coincident
-		 * upon it (valance of 2).
-		 * A more generalized edge collapse function can be built using a combination of
-		 * split_face_make_edge, join_face_kill_edge and join_edge_kill_vert.
-		 * Returns true for success
-		 */
-		public bool JoinEdgeAndDeleteVertex(int joinEdgeIndex, int deleteVertexIndex)
-		{
-			var joinEdge = GetEdge(joinEdgeIndex);
-			var deleteVertex = GetVertex(deleteVertexIndex);
-			return JoinEdgeAndDeleteVertex(ref joinEdge, ref deleteVertex);
-		}
-
-		public bool JoinEdgeAndDeleteVertex(ref Edge removeEdge, ref Vertex deleteVertex)
-		{
-			if (removeEdge.IsValid == false || removeEdge.ContainsVertex(deleteVertex.Index) == false ||
-			    deleteVertex.IsValid == false || CalculateEdgeCount(deleteVertex) != 2)
-				return false;
-
-			// remove edge from disk cycles of A and O
-			//var vertexA = GetVertex(removeEdge.AVertexIndex);
-			//var vertexO = GetVertex(removeEdge.OVertexIndex);
-			RemoveEdgeFromDiskCycle(removeEdge.AVertexIndex, removeEdge);
-			RemoveEdgeFromDiskCycle(removeEdge.OVertexIndex, removeEdge);
-
-			// relink edge
-			// join loops
-
-			return true;
-		}
-
-		/*
-		 * SPLIT FACE MAKE EDGE:
-		 * Takes as input two vertices in a single face. An edge is created which divides
-		 * the original face into two distinct regions. One of the regions is assigned to
-		 * the original face and it is closed off. The second region has a new face assigned to it.
-		 * Note that if the input vertices share an edge this will create a face with only two edges.
-		 * Returns - new Face and new Edge indices
-		 */
-		public (int, int) SplitFaceAndCreateEdge(int faceIndex) => throw new NotImplementedException();
-
-		/*
-		 * JOIN FACE KILL EDGE:
-		 * Takes two faces joined by a single 2-manifold edge and fuses them together.
-		 * The edge shared by the faces must not be connected to any other edges which have
-		 * both faces in its radial cycle.
-		 * An illustration of this appears in the figure on the right. In this diagram,
-		 * situation A is the only one in which join_face_kill_edge will return with a value
-		 * indicating success. If the tool author wants to join two seperate faces which have
-		 * multiple edges joining them as in situation B they should run JEKV on the excess
-		 * edge(s) first. In the case of situation none of the edges joining the two faces
-		 * can be safely removed because it would cause a face that loops back on itself.
-		 * Also note that the order of arguments decides whether or not certain per-face
-		 * attributes are present in the resultant face. For instance vertex winding,
-		 * material index, smooth flags, ect are inherited from f1, not f2.
-		 * Returns - true for success
-		 */
-		public bool JoinFacesAndDeleteEdge(int face0Index, int face1Index) => throw new NotImplementedException();
-
-		/*
-		 * Flip face by reversing its loops.
-		 */
-		public void FlipFace(int faceIndex) => throw new NotImplementedException();
 	}
 }

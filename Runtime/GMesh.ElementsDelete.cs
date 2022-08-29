@@ -1,7 +1,8 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using UnityEngine;
+using Unity.Burst;
+using Unity.Burst.CompilerServices;
 
 namespace CodeSmile.GraphMesh
 {
@@ -13,228 +14,210 @@ namespace CodeSmile.GraphMesh
 		/// either intentionally or by accident.
 		/// </summary>
 		/// <param name="faceIndex"></param>
-		public void DeleteFace(int faceIndex)
-		{
-			ForEachLoop(faceIndex, loop =>
-			{
-				// detach loop from face, thus DeleteLoopFromFace knows it's okay to delete the loop
-				loop.FaceIndex = UnsetIndex;
-				DeleteLoopInternal_DeleteDetachedLoop(loop);
-			});
-
-			InvalidateFace(faceIndex);
-			RemoveInvalidatedElements();
-		}
+		public void DeleteFace(int faceIndex) => Delete.Face(_data, faceIndex);
 
 		/// <summary>
 		/// Deletes an edge, as well as its loops and thus all the faces connecting to it.
 		/// </summary>
 		/// <param name="edgeIndex"></param>
-		public void DeleteEdge(int edgeIndex)
-		{
-			var edge = GetEdge(edgeIndex);
-			if (edge.IsValid)
-				DeleteEdgeInternal_DeleteEdgeLoopsAndFaces(ref edge);
-
-			// edge may have been deleted above
-			if (edge.IsValid)
-			{
-				DeleteEdgeInternal_UpdateOrDeleteVertices(edge);
-				DeleteEdgeInternal_UpdateEdgeCycle(edge);
-				InvalidateEdge(edgeIndex);
-			}
-		}
+		public void DeleteEdge(int edgeIndex) => Delete.Edge(_data, edgeIndex);
 
 		/// <summary>
 		/// Deletes a vertex, as well as all edges and faces connected to it.
 		/// In other words: if you had a GMesh with just a single face, then deleting any vertex will clear the whole mesh. 
 		/// </summary>
 		/// <param name="vertexIndex"></param>
-		public void DeleteVertex(int vertexIndex)
+		public void DeleteVertex(int vertexIndex) => Delete.Vertex(_data, vertexIndex);
+
+		[BurstCompile]
+		private readonly struct Delete
 		{
-			var vertex = GetVertex(vertexIndex);
-			while (vertex.IsValid && vertex.BaseEdgeIndex != UnsetIndex)
+			public static void Face(in GraphData data, int faceIndex)
 			{
-				DeleteEdge(vertex.BaseEdgeIndex);
-
-				// get again => vertex is modified by DeleteEdge
-				vertex = GetVertex(vertexIndex);
-			}
-
-			if (vertex.IsValid)
-				InvalidateVertex(vertex.Index);
-		}
-
-		/// <summary>
-		/// Deletes a loop. Checks if the loop has a face associated with it, if so, it will also delete the face
-		/// and any other loop associated with that face.
-		/// </summary>
-		/// <param name="loopIndex"></param>
-		private void DeleteLoop(int loopIndex)
-		{
-			var loop = GetLoop(loopIndex);
-
-			// if loop is associated with a face, delete the face which will call DeleteLoopFromFace
-			if (loop.IsValid && loop.FaceIndex != UnsetIndex)
-			{
-				DeleteFace(loop.FaceIndex);
-				return;
-			}
-
-			DeleteLoopInternal_DeleteDetachedLoop(loop);
-		}
-
-		/// <summary>
-		/// When deleting a loop this updates the edge's references to that loop.
-		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
-		/// </summary>
-		/// <param name="loop"></param>
-		private void DeleteLoopInternal_UpdateOrDeleteEdge(in Loop loop)
-		{
-			var loopEdge = GetEdge(loop.EdgeIndex);
-			if (loop.NextRadialLoopIndex == loop.Index)
-			{
-				// It's the last loop for this edge thus clear edge's loop index:
-				loopEdge.BaseLoopIndex = UnsetIndex;
-				SetEdge(loopEdge);
-
-				// this edge is no longer needed
-				DeleteEdge(loopEdge.Index);
-			}
-			else
-			{
-				DeleteLoopInternal_DetachFromRadialLoopCycle(loop);
-
-				// if edge refers to this loop, make it point to the next radial loop
-				if (loopEdge.BaseLoopIndex == loop.Index)
+				var face = data.GetFace(faceIndex);
+				if (Hint.Likely(face.IsValid))
 				{
-					loopEdge.BaseLoopIndex = loop.NextRadialLoopIndex;
-					SetEdge(loopEdge);
+					var elementCount = face.ElementCount;
+					var loop = data.GetLoop(face.FirstLoopIndex);
+
+					for (var i = 0; Hint.Likely(i < elementCount); i++)
+					{
+						// detach loop from face, thus DeleteLoopFromFace knows it's okay to delete the loop
+						loop.FaceIndex = UnsetIndex;
+						DeleteLoopInternal_DeleteDetachedLoop(data, loop);
+
+						loop = data.GetLoop(loop.NextLoopIndex);
+					}
+				}
+
+				data.InvalidateFace(faceIndex);
+			}
+
+			private static void Loop(in GraphData data, int loopIndex)
+			{
+				var loop = data.GetLoop(loopIndex);
+
+				// if loop is associated with a face, delete the face which will call DeleteLoopFromFace
+				if (loop.IsValid && loop.FaceIndex != UnsetIndex)
+				{
+					Face(data, loop.FaceIndex);
+					return;
+				}
+
+				DeleteLoopInternal_DeleteDetachedLoop(data, loop);
+			}
+
+			public static void Edge(in GraphData data, int edgeIndex)
+			{
+				var edge = data.GetEdge(edgeIndex);
+				if (edge.IsValid)
+					DeleteEdgeInternal_DeleteEdgeLoopsAndFaces(data, ref edge);
+
+				// edge may have been deleted above
+				if (edge.IsValid)
+				{
+					DeleteEdgeInternal_UpdateOrDeleteVertices(data, edge);
+					DeleteEdgeInternal_RelinkDiskCycle(data, edge);
+					data.InvalidateEdge(edgeIndex);
 				}
 			}
-		}
 
-		/// <summary>
-		/// Detaches a loop from the radial cycle of its edge.
-		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
-		/// </summary>
-		/// <param name="loop"></param>
-		private void DeleteLoopInternal_DetachFromRadialLoopCycle(in Loop loop)
-		{
-			var prevRadialLoop = GetLoop(loop.PrevRadialLoopIndex);
-			prevRadialLoop.NextRadialLoopIndex = loop.NextRadialLoopIndex;
-			SetLoop(prevRadialLoop);
-
-			var nextRadialLoop = GetLoop(loop.NextRadialLoopIndex);
-			nextRadialLoop.PrevRadialLoopIndex = loop.PrevRadialLoopIndex;
-			SetLoop(nextRadialLoop);
-		}
-
-		/// <summary>
-		/// Deletes a loop from a face without trying to delete the face as well.
-		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
-		/// </summary>
-		/// <param name="loop"></param>
-		private void DeleteLoopInternal_DeleteDetachedLoop(in Loop loop)
-		{
-			Debug.Assert(loop.FaceIndex == UnsetIndex, "DeleteLoopFromFace cannot be called on loops still attached to a face");
-			if (loop.IsValid)
+			public static void Vertex(in GraphData data, int vertexIndex)
 			{
-				DeleteLoopInternal_UpdateOrDeleteEdge(loop);
-				InvalidateLoop(loop.Index);
-			}
-		}
-
-		/// <summary>
-		/// Deletes all the loops of an edge. This can cause faces to be deleted as well.
-		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
-		/// </summary>
-		/// <param name="edge">Edge passed by reference because it may be modified by DeleteLoop()</param>
-		private void DeleteEdgeInternal_DeleteEdgeLoopsAndFaces(ref Edge edge)
-		{
-			// delete all the loops
-			while (edge.BaseLoopIndex != UnsetIndex)
-			{
-				DeleteLoop(edge.BaseLoopIndex);
-
-				// get again => edge is modified by DeleteLoop
-				edge = GetEdge(edge.Index);
-			}
-		}
-
-		/// <summary>
-		/// Updates vertex edge indices of the edge that is about to be deleted.
-		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
-		/// </summary>
-		/// <param name="edge"></param>
-		private void DeleteEdgeInternal_UpdateOrDeleteVertices(in Edge edge)
-		{
-			var edgeIndex = edge.Index;
-
-			var v0 = GetVertex(edge.AVertexIndex);
-			if (edgeIndex == v0.BaseEdgeIndex)
-			{
-				if (edgeIndex != edge.ANextEdgeIndex)
+				var vertex = data.GetVertex(vertexIndex);
+				while (Hint.Likely(vertex.IsValid && vertex.BaseEdgeIndex != UnsetIndex))
 				{
-					v0.BaseEdgeIndex = edge.ANextEdgeIndex;
-					SetVertex(v0);
+					Edge(data, vertex.BaseEdgeIndex);
+
+					// get again => vertex is modified by DeleteEdge
+					vertex = data.GetVertex(vertexIndex);
+				}
+
+				if (Hint.Likely(vertex.IsValid))
+					data.InvalidateVertex(vertex.Index);
+			}
+
+			private static void DeleteLoopInternal_UpdateOrDeleteEdge(in GraphData data, in Loop loop)
+			{
+				var loopEdge = data.GetEdge(loop.EdgeIndex);
+				if (Hint.Unlikely(loop.NextRadialLoopIndex == loop.Index))
+				{
+					// It's the last loop for this edge thus clear edge's loop index:
+					loopEdge.BaseLoopIndex = UnsetIndex;
+					data.SetEdge(loopEdge);
+
+					// this edge is no longer needed
+					Edge(data, loopEdge.Index);
 				}
 				else
 				{
-					// remove orphaned vertex
-					InvalidateVertex(v0.Index);
+					DeleteLoopInternal_DetachFromRadialLoopCycle(data, loop);
+
+					// if edge refers to this loop, make it point to the next radial loop
+					if (loopEdge.BaseLoopIndex == loop.Index)
+					{
+						loopEdge.BaseLoopIndex = loop.NextRadialLoopIndex;
+						data.SetEdge(loopEdge);
+					}
 				}
 			}
 
-			var v1 = GetVertex(edge.OVertexIndex);
-			if (edgeIndex == v1.BaseEdgeIndex)
+			private static void DeleteLoopInternal_DetachFromRadialLoopCycle(in GraphData data, in Loop loop)
 			{
-				if (edgeIndex != edge.ONextEdgeIndex)
+				var prevRadialLoop = data.GetLoop(loop.PrevRadialLoopIndex);
+				prevRadialLoop.NextRadialLoopIndex = loop.NextRadialLoopIndex;
+				data.SetLoop(prevRadialLoop);
+
+				var nextRadialLoop = data.GetLoop(loop.NextRadialLoopIndex);
+				nextRadialLoop.PrevRadialLoopIndex = loop.PrevRadialLoopIndex;
+				data.SetLoop(nextRadialLoop);
+			}
+
+			private static void DeleteLoopInternal_DeleteDetachedLoop(in GraphData data, in Loop loop)
+			{
+				if (Hint.Likely(loop.IsValid))
 				{
-					v1.BaseEdgeIndex = edge.ONextEdgeIndex;
-					SetVertex(v1);
+					DeleteLoopInternal_UpdateOrDeleteEdge(data, loop);
+					data.InvalidateLoop(loop.Index);
 				}
-				else
+			}
+
+			private static void DeleteEdgeInternal_DeleteEdgeLoopsAndFaces(in GraphData data, ref Edge edge)
+			{
+				// delete all the loops
+				while (Hint.Likely(edge.BaseLoopIndex != UnsetIndex))
 				{
-					// remove orphaned vertex
-					InvalidateVertex(v1.Index);
+					Loop(data, edge.BaseLoopIndex);
+
+					// get again => edge is modified by DeleteLoop
+					edge = data.GetEdge(edge.Index);
 				}
 			}
-		}
 
-		/// <summary>
-		/// Updates the edge cycle of the to be deleted edge and its neighbours.
-		/// CAUTION: Delete*Internal() methods should only be called by respective Delete*() methods.
-		/// </summary>
-		/// <param name="edge"></param>
-		private void DeleteEdgeInternal_UpdateEdgeCycle(in Edge edge)
-		{
-			var prev0Edge = GetEdge(edge.APrevEdgeIndex);
-			if (prev0Edge.IsValid)
+			private static void DeleteEdgeInternal_UpdateOrDeleteVertices(in GraphData data, in Edge edge)
 			{
-				prev0Edge.SetNextEdgeIndex(edge.AVertexIndex, edge.ANextEdgeIndex);
-				SetEdge(prev0Edge);
+				var edgeIndex = edge.Index;
+
+				var v0 = data.GetVertex(edge.AVertexIndex);
+				if (edgeIndex == v0.BaseEdgeIndex)
+				{
+					if (edgeIndex != edge.ANextEdgeIndex)
+					{
+						v0.BaseEdgeIndex = edge.ANextEdgeIndex;
+						data.SetVertex(v0);
+					}
+					else
+					{
+						// remove orphaned vertex
+						data.InvalidateVertex(v0.Index);
+					}
+				}
+
+				var v1 = data.GetVertex(edge.OVertexIndex);
+				if (edgeIndex == v1.BaseEdgeIndex)
+				{
+					if (edgeIndex != edge.ONextEdgeIndex)
+					{
+						v1.BaseEdgeIndex = edge.ONextEdgeIndex;
+						data.SetVertex(v1);
+					}
+					else
+					{
+						// remove orphaned vertex
+						data.InvalidateVertex(v1.Index);
+					}
+				}
 			}
 
-			var next0Edge = GetEdge(edge.ANextEdgeIndex);
-			if (next0Edge.IsValid)
+			private static void DeleteEdgeInternal_RelinkDiskCycle(in GraphData data, in Edge edge)
 			{
-				next0Edge.SetPrevEdgeIndex(edge.AVertexIndex, edge.APrevEdgeIndex);
-				SetEdge(next0Edge);
-			}
+				var prev0Edge = data.GetEdge(edge.APrevEdgeIndex);
+				if (prev0Edge.IsValid)
+				{
+					prev0Edge.SetNextEdgeIndex(edge.AVertexIndex, edge.ANextEdgeIndex);
+					data.SetEdge(prev0Edge);
+				}
 
-			var prev1Edge = GetEdge(edge.OPrevEdgeIndex);
-			if (prev1Edge.IsValid)
-			{
-				prev1Edge.SetNextEdgeIndex(edge.OVertexIndex, edge.ONextEdgeIndex);
-				SetEdge(prev1Edge);
-			}
+				var next0Edge = data.GetEdge(edge.ANextEdgeIndex);
+				if (next0Edge.IsValid)
+				{
+					next0Edge.SetPrevEdgeIndex(edge.AVertexIndex, edge.APrevEdgeIndex);
+					data.SetEdge(next0Edge);
+				}
 
-			var next1Edge = GetEdge(edge.ONextEdgeIndex);
-			if (next1Edge.IsValid)
-			{
-				next1Edge.SetPrevEdgeIndex(edge.OVertexIndex, edge.OPrevEdgeIndex);
-				SetEdge(next1Edge);
+				var prev1Edge = data.GetEdge(edge.OPrevEdgeIndex);
+				if (prev1Edge.IsValid)
+				{
+					prev1Edge.SetNextEdgeIndex(edge.OVertexIndex, edge.ONextEdgeIndex);
+					data.SetEdge(prev1Edge);
+				}
+
+				var next1Edge = data.GetEdge(edge.ONextEdgeIndex);
+				if (next1Edge.IsValid)
+				{
+					next1Edge.SetPrevEdgeIndex(edge.OVertexIndex, edge.OPrevEdgeIndex);
+					data.SetEdge(next1Edge);
+				}
 			}
 		}
 	}
