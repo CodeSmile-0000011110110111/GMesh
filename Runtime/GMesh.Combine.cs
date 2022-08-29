@@ -60,15 +60,15 @@ namespace CodeSmile.GraphMesh
 			// GATHER FACE + VERTEX DATA FROM INPUT MESHES
 			// ===============================================================================================================================
 			var meshCount = inputMeshes.Count;
-			var gatherData = new NativeArray<JCombine.MergeData>[meshCount];
+			var gatherData = new NativeArray<CombineJobs.MergeData>[meshCount];
 			var gatherHandles = new NativeArray<JobHandle>(meshCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
 			for (var meshIndex = 0; meshIndex < meshCount; meshIndex++)
 			{
 				var inputMesh = inputMeshes[meshIndex];
-				var data = new NativeArray<JCombine.MergeData>(inputMesh.ValidLoopCount, Allocator.TempJob,
+				var data = new NativeArray<CombineJobs.MergeData>(inputMesh.ValidLoopCount, Allocator.TempJob,
 					NativeArrayOptions.UninitializedMemory);
-				var job = new JCombine.GatherDataJob
+				var job = new CombineJobs.GatherDataJob
 				{
 					CombineData = data, MeshIndex = meshIndex, Faces = inputMesh.Faces, Loops = inputMesh.Loops, Vertices = inputMesh.Vertices,
 				};
@@ -82,7 +82,7 @@ namespace CodeSmile.GraphMesh
 			// COPY GATHERED DATA INTO SINGLE ARRAY
 			// ===============================================================================================================================
 			// combine all mesh data into one array
-			var combinedData = new NativeArray<JCombine.MergeData>(totalLoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+			var combinedData = new NativeArray<CombineJobs.MergeData>(totalLoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			var dstIndex = 0;
 
 			combinedGatherHandle.Complete();
@@ -91,7 +91,7 @@ namespace CodeSmile.GraphMesh
 			{
 				var meshGatherData = gatherData[meshIndex];
 				var length = meshGatherData.Length;
-				NativeArray<JCombine.MergeData>.Copy(meshGatherData, 0, combinedData, dstIndex, length);
+				NativeArray<CombineJobs.MergeData>.Copy(meshGatherData, 0, combinedData, dstIndex, length);
 				dstIndex += length;
 				meshGatherData.Dispose();
 			}
@@ -106,7 +106,7 @@ namespace CodeSmile.GraphMesh
 			var combinedVertexIndices = new NativeArray<int>(totalLoopCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			var combinedMesh = new GMesh();
 
-			var createVertsJob = new JCombine.CreateVerticesJob
+			var createVertsJob = new CombineJobs.CreateVerticesJob
 			{
 				Data = combinedMesh._data, CombinedData = combinedData, CombinedVertexIndices = combinedVertexIndices,
 				KnownGridPositions = knownGridPositions, TotalFaceCount = totalFaceCount, TotalLoopCount = totalLoopCount,
@@ -118,7 +118,7 @@ namespace CodeSmile.GraphMesh
 			// CREATE COMBINED MESH FACES
 			// ===============================================================================================================================
 
-			var createFacesJob = new JCombine.CreateFacesJob
+			var createFacesJob = new CombineJobs.CreateFacesJob
 				{ Data = combinedMesh._data, CombinedData = combinedData, CombinedVertexIndices = combinedVertexIndices };
 			var createFacesHandle = createFacesJob.Schedule(createVertsHandle);
 			
@@ -131,7 +131,7 @@ namespace CodeSmile.GraphMesh
 		}
 
 		[BurstCompile]
-		private static class JCombine
+		private static class CombineJobs
 		{
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct CreateFacesJob : IJob

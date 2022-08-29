@@ -12,17 +12,6 @@ namespace CodeSmile.GraphMesh
 	public sealed partial class GMesh
 	{
 		/// <summary>
-		/// Calculates vertices for an n-gon with the given number of vertices and scale where vertices go in clockwise order around
-		/// the center (0,0,0) with first vertex position (0,0,scale).
-		/// </summary>
-		/// <param name="vertexCount"></param>
-		/// <param name="scale"></param>
-		/// <param name="vertices">Returned NativeArray of vertices, caller is responsible for disposing this array.</param>
-		/// <param name="allocator">The allocator to use for the returned vertices array. Defaults to TempJob.</param>
-		public static void CalculateRadialPolygonVertices(int vertexCount, float scale, out NativeArray<float3> vertices,
-			Allocator allocator = Allocator.TempJob) => Calculate.RadialPolygonVertices(vertexCount, scale, out vertices, allocator);
-
-		/// <summary>
 		/// Calculates center position between the two positions.
 		/// </summary>
 		/// <param name="pos0"></param>
@@ -160,7 +149,7 @@ namespace CodeSmile.GraphMesh
 
 				if (vertex.BaseEdgeIndex == UnsetIndex)
 					return 0;
-				
+
 				var edgeCount = 0;
 				var edge = data.GetEdge(vertex.BaseEdgeIndex);
 				do

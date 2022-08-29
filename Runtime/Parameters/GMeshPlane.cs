@@ -8,12 +8,11 @@ using UnityEngine;
 
 namespace CodeSmile
 {
-	
 	[Serializable]
 	public class GMeshPlane
 	{
 		public const int MinVertexCount = 2;
-		public const int MaxVertexCount = 11;
+		public const int MaxVertexCount = 101;
 		public static readonly float3 DefaultRotation = new(90f, 0f, 0f);
 
 		public bool ResetToDefaults;

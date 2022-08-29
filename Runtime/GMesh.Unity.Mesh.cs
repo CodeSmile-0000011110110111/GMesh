@@ -43,7 +43,7 @@ namespace CodeSmile.GraphMesh
 			var triangleStartIndices = new NativeArray<int>(ValidFaceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 			var totalVCount = new NativeReference<int>(Allocator.TempJob);
 			var totalICount = new NativeReference<int>(Allocator.TempJob);
-			var gatherDataJob = new JMesh.GatherFaceDataJob
+			var gatherDataJob = new MeshJobs.GatherFaceDataJob
 			{
 				Faces = faces, TriangleStartIndices = triangleStartIndices, TotalVertexCount = totalVCount,
 				TotalIndexCount = totalICount,
@@ -56,9 +56,9 @@ namespace CodeSmile.GraphMesh
 			gatherDataHandle.Complete();
 
 			// PREPARE VERTEX BUFFER
-			var attributes = new NativeArray<VertexAttributeDescriptor>(JMesh.VertexPositionNormalUV.AttributeCount, Allocator.Temp,
+			var attributes = new NativeArray<VertexAttributeDescriptor>(MeshJobs.VertexPositionNormalUV.AttributeCount, Allocator.Temp,
 				NativeArrayOptions.UninitializedMemory);
-			JMesh.VertexPositionNormalUV.GetAttributes(ref attributes);
+			MeshJobs.VertexPositionNormalUV.GetAttributes(ref attributes);
 			var totalVertexCount = totalVCount.Value;
 			meshData.SetVertexBufferParams(totalVertexCount, attributes);
 			attributes.Dispose();
@@ -69,10 +69,10 @@ namespace CodeSmile.GraphMesh
 			meshData.SetIndexBufferParams(totalIndexCount, indicesAre16Bit ? IndexFormat.UInt16 : IndexFormat.UInt32);
 
 			// TRI(STR)ANGULATION
-			var triangulateJob = new JMesh.FanTriangulateFacesJob
+			var triangulateJob = new MeshJobs.FanTriangulateFacesJob
 			{
 				Faces = faces, Loops = Loops, Vertices = Vertices, TriangleStartIndices = triangleStartIndices,
-				VBuffer = meshData.GetVertexData<JMesh.VertexPositionNormalUV>(),
+				VBuffer = meshData.GetVertexData<MeshJobs.VertexPositionNormalUV>(),
 				IBuffer16 = indicesAre16Bit ? meshData.GetIndexData<ushort>() : default,
 				IBuffer32 = indicesAre16Bit ? default : meshData.GetIndexData<uint>(),
 				IsIndexBuffer16Bit = indicesAre16Bit,
@@ -98,7 +98,7 @@ namespace CodeSmile.GraphMesh
 			return mesh;
 		}
 
-		private static class JMesh
+		private static class MeshJobs
 		{
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct GatherFaceDataJob : IJobFor

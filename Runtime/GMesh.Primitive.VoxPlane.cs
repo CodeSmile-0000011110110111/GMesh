@@ -1,6 +1,7 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
+using System;
 using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Collections;
@@ -14,15 +15,33 @@ namespace CodeSmile.GraphMesh
 	public sealed partial class GMesh
 	{
 		/// <summary>
-		/// Schedules jobs that create a plane based on input parameters.
-		/// Caller is responsible for calling Complete() on the returned JobHandle.
+		/// Creates a "voxelized" heightmap plane where cuboids stick out based on normalized heightmap values for each
+		/// quad in the plane.
+		/// Heightmap must have subdivisions X*Y entried, that means VertexCount (X-1)*(Y-1) must be same as heightmap.Length.
+		/// .
 		/// </summary>
 		/// <param name="parameters"></param>
+		/// <param name="normalizedHeightmap">Heightmap values in 0.0 to 1.0 range (normalized) with VertexCount (X-1)*(Y-1) entries.</param>
+		/// <param name="flattenThreshold">If neighbouring quads' height differs less than this, they are considered flat (equal height).</param>
 		/// <returns></returns>
-		public JobHandle ScheduleCreatePlane(GMeshPlane parameters)
+		public static GMesh VoxPlane(GMeshPlane parameters, in NativeArray<float> normalizedHeightmap, float flattenThreshold = 0.1f)
+		{
+			if (parameters.VertexCountX < 2 || parameters.VertexCountY < 2)
+				throw new ArgumentException("minimum of 2 vertices per axis required");
+
+			var subdivisions = new int2(parameters.VertexCountX - 1, parameters.VertexCountY - 1);
+			if (normalizedHeightmap.Length != subdivisions.x * subdivisions.y)
+				throw new ArgumentException("heightmap length does not match subdivisions area (x*y)");
+
+			var gMesh = new GMesh();
+			gMesh.ScheduleCreateVoxPlane(parameters, normalizedHeightmap, flattenThreshold).Complete();
+			return gMesh;
+		}
+
+		public JobHandle ScheduleCreateVoxPlane(GMeshPlane parameters, in NativeArray<float> normalizedHeightmap, float flattenThreshold)
 		{
 			var vertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY);
-			var vertsJob = new JPlane.CreatePlaneVerticesJob
+			var vertsJob = new VoxPlaneJobs.CreatePlaneVerticesJob
 			{
 				PlaneVertexCount = vertexCount,
 				Translation = parameters.Translation, Rotation = parameters.Rotation, Scale = float3(parameters.Scale, DefaultScale),
@@ -30,13 +49,49 @@ namespace CodeSmile.GraphMesh
 			vertsJob.Init(ref _data, vertexCount.x * vertexCount.y);
 			var vertJobHandle = vertsJob.Schedule(vertexCount.x * vertexCount.y, 4);
 
-			var planeJob = new JPlane.CreatePlaneQuadsJob { Data = _data, PlaneVertexCount = vertexCount };
+			var planeJob = new VoxPlaneJobs.CreatePlaneQuadsJob { Data = _data, PlaneVertexCount = vertexCount };
 			return planeJob.Schedule(vertJobHandle);
 		}
 
 		[BurstCompile]
-		private static class JPlane
+		private static class VoxPlaneJobs
 		{
+			public enum Neighbours
+			{
+				Left,
+				Up,
+				Right,
+				Down,
+			}
+
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+			public struct VoxCubeVertices
+			{
+				// y coordinate (height) of current face
+				public float FaceY;
+				
+				// preprocess neighbour heights?
+
+				/*
+				// current face's loop startvertices in clockwise order
+				public readonly float3 WestV0;
+				public readonly float3 NorthV0;
+				public readonly float3 EastV0;
+				public readonly float3 SouthV0;
+
+				// vertices of surrounding faces to determine side faces (if any)
+				// V0/V1 go along the loops in clockwise order, with V0 being the loop's start vertex
+				public readonly float3 SideWestV0;
+				public readonly float3 SideWestV1;
+				public readonly float3 SideNorthV0;
+				public readonly float3 SideNorthV1;
+				public readonly float3 SideEastV0;
+				public readonly float3 SideEastV1;
+				public readonly float3 SideSouthV0;
+				public readonly float3 SideSouthV1;
+				*/
+			}
+
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct CreatePlaneVerticesJob : IJobParallelFor
 			{
