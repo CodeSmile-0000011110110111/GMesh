@@ -69,20 +69,16 @@ namespace CodeSmile.GraphMesh
 			meshData.SetIndexBufferParams(totalIndexCount, indicesAre16Bit ? IndexFormat.UInt16 : IndexFormat.UInt32);
 
 			// TRI(STR)ANGULATION
-			JobHandle triangulateHandle;
-			if (indicesAre16Bit)
+			var triangulateJob = new JMesh.FanTriangulateFacesJob
 			{
-				var triangulateJob = new JMesh.FanTriangulateFaces16BitJob
-				{
-					Faces = faces, Loops = Loops, Vertices = Vertices, TriangleStartIndices = triangleStartIndices,
-					VBuffer = meshData.GetVertexData<JMesh.VertexPositionNormalUV>(),
-					IBuffer = meshData.GetIndexData<ushort>(),
-				};
-				triangulateHandle = triangulateJob.Schedule(ValidLoopCount, 4);
-			}
-			else
-				throw new NotImplementedException("TODO: 32 bit mesh indices");
-			
+				Faces = faces, Loops = Loops, Vertices = Vertices, TriangleStartIndices = triangleStartIndices,
+				VBuffer = meshData.GetVertexData<JMesh.VertexPositionNormalUV>(),
+				IBuffer16 = indicesAre16Bit ? meshData.GetIndexData<ushort>() : default,
+				IBuffer32 = indicesAre16Bit ? default : meshData.GetIndexData<uint>(),
+				IsIndexBuffer16Bit = indicesAre16Bit,
+			};
+			var triangulateHandle = triangulateJob.Schedule(ValidLoopCount, 4);
+
 			// COMPLETE & DISPOSE
 			totalVCount.Dispose();
 			totalICount.Dispose();
@@ -128,7 +124,7 @@ namespace CodeSmile.GraphMesh
 
 			// TODO: split into two jobs, one for vertices and another for indices ?
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-			public struct FanTriangulateFaces16BitJob : IJobParallelFor
+			public struct FanTriangulateFacesJob : IJobParallelFor
 			{
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Face>.ReadOnly Faces;
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<Loop>.ReadOnly Loops;
@@ -139,7 +135,19 @@ namespace CodeSmile.GraphMesh
 				public NativeArray<VertexPositionNormalUV> VBuffer;
 
 				[WriteOnly] [NoAlias] [NativeDisableParallelForRestriction] [NativeDisableContainerSafetyRestriction]
-				public NativeArray<ushort> IBuffer;
+				public NativeArray<ushort> IBuffer16;
+				[WriteOnly] [NoAlias] [NativeDisableParallelForRestriction] [NativeDisableContainerSafetyRestriction]
+				public NativeArray<uint> IBuffer32;
+
+				public bool IsIndexBuffer16Bit;
+
+				private void SetBuffer(int bufferIndex, int triangleIndex)
+				{
+					if (Hint.Likely(IsIndexBuffer16Bit))
+						IBuffer16[bufferIndex] = (ushort)triangleIndex;
+					else
+						IBuffer32[bufferIndex] = (uint)triangleIndex;
+				}
 
 				public void Execute(int loopIndex)
 				{
@@ -156,20 +164,20 @@ namespace CodeSmile.GraphMesh
 						var iIndex = TriangleStartIndices[face.Index];
 						var vIndex = loopIndex;
 						var triangleStartVertIndex = vIndex;
-						uint triangleVertIndex = 0;
+						var triangleVertIndex = 0;
 
 						var elementCount = face.ElementCount;
-						for (var i = 0; i < elementCount; i++)
+						for (var i = 0; Hint.Likely(i < elementCount); i++)
 						{
 							var loopVert = Vertices[loop.StartVertexIndex];
 							if (Hint.Likely(triangleVertIndex > 2))
 							{
 								// add extra fan triangles from first vertex to last vertex
-								IBuffer[iIndex++] = (ushort)triangleStartVertIndex;
-								IBuffer[iIndex++] = (ushort)(triangleStartVertIndex + triangleVertIndex - 1);
+								SetBuffer(iIndex++, triangleStartVertIndex);
+								SetBuffer(iIndex++, triangleStartVertIndex + triangleVertIndex - 1);
 							}
 
-							IBuffer[iIndex++] = (ushort)(triangleStartVertIndex + triangleVertIndex);
+							SetBuffer(iIndex++, triangleStartVertIndex + triangleVertIndex);
 							VBuffer[vIndex++] = new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero);
 
 							triangleVertIndex++;
