@@ -18,6 +18,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 	[Range(3, 60)] [SerializeField] private int _polygonVertexCount = 3;
 	[Range(0.01f, 1000f)] [SerializeField] private float _polygonScale = 1f;
 	[SerializeField] private GMeshPlane _planeParameters = new();
+	[SerializeField] private GMeshVoxPlane _voxPlaneParameters = new();
 	[SerializeField] private GMeshCube _cubeParameters = new();
 
 	[Header("Euler Operators")]
@@ -153,6 +154,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 		PrimitiveType.Quad => GMesh.Quad(_polygonScale),
 		PrimitiveType.Polygon => GMesh.Polygon(_polygonVertexCount, _polygonScale),
 		PrimitiveType.Plane => GMesh.Plane(_planeParameters),
+		PrimitiveType.VoxPlane => GMesh.VoxPlane(_voxPlaneParameters),
 		PrimitiveType.Cube => GMesh.Cube(_cubeParameters),
 		_ => throw new NotSupportedException(_primitiveType.ToString()),
 	};
@@ -163,6 +165,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 		Quad,
 		Polygon,
 		Plane,
+		VoxPlane,
 		Cube,
 	}
 }

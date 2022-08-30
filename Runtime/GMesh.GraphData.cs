@@ -10,6 +10,8 @@ namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
+		private const int QuadElementCount = 4;
+
 		private GraphData _data;
 
 		/// <summary>
@@ -190,11 +192,11 @@ namespace CodeSmile.GraphMesh
 				Count = 4,
 			}
 
-			private NativeArray<int> _elementCounts;
-			private NativeList<Vertex> _vertices;
-			private NativeList<Edge> _edges;
-			private NativeList<Loop> _loops;
-			private NativeList<Face> _faces;
+			[NativeDisableParallelForRestriction] private NativeArray<int> _elementCounts;
+			[NativeDisableParallelForRestriction] private NativeList<Vertex> _vertices;
+			[NativeDisableParallelForRestriction] private NativeList<Edge> _edges;
+			[NativeDisableParallelForRestriction] private NativeList<Loop> _loops;
+			[NativeDisableParallelForRestriction] private NativeList<Face> _faces;
 
 			internal NativeArray<Vertex> VerticesAsWritableArray => _vertices.AsArray();
 
@@ -331,6 +333,8 @@ namespace CodeSmile.GraphMesh
 				_faces[index] = face;
 				ValidFaceCount--;
 			}
+
+			public override string ToString() => $"{ValidFaceCount} faces, {ValidEdgeCount} edges, {ValidVertexCount} vertices";
 
 			public bool Equals(GraphData other) => _elementCounts.Equals(other._elementCounts) &&
 			                                       _vertices.Equals(other._vertices) && _edges.Equals(other._edges) &&

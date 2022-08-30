@@ -9,7 +9,7 @@ using UnityEngine;
 namespace CodeSmile
 {
 	[Serializable]
-	public class GMeshPlane
+	public class GMeshVoxPlane
 	{
 		public const int MinVertexCount = 2;
 		public const int MaxVertexCount = 101;
@@ -19,24 +19,26 @@ namespace CodeSmile
 		[Range(MinVertexCount, MaxVertexCount)] public int VertexCountX = MinVertexCount;
 		[Range(MinVertexCount, MaxVertexCount)] public int VertexCountY = MinVertexCount;
 
+		public float FlattenThreshold = 0.1f;
+
 		//[Tooltip("Center of rotation and scale")] public float3 Pivot = float3.zero;
 		[Tooltip("Vertex offset from pivot")] public float3 Translation = float3.zero;
 		[Tooltip("Rotation is in degrees (Euler)")] public float3 Rotation = DefaultRotation;
-		[Tooltip("Planes are 2-dimensional therefore scale is just X/Y")] public float2 Scale = GMesh.DefaultScale;
+		[Tooltip("Plane size scales along X/Y, with Z being the depth/height scale")] public float3 Scale = GMesh.DefaultScale;
 
-		public GMeshPlane()
+		public GMeshVoxPlane()
 			: this(MinVertexCount, float3.zero, DefaultRotation, GMesh.DefaultScale) {}
 
-		public GMeshPlane(int2 vertexCount)
+		public GMeshVoxPlane(int2 vertexCount)
 			: this(vertexCount, float3.zero, DefaultRotation, GMesh.DefaultScale) {}
 
-		public GMeshPlane(int2 vertexCount, float2 scale)
+		public GMeshVoxPlane(int2 vertexCount, float3 scale)
 			: this(vertexCount, float3.zero, DefaultRotation, scale) {}
 
-		public GMeshPlane(int2 vertexCount, float3 translation, float3 rotation)
+		public GMeshVoxPlane(int2 vertexCount, float3 translation, float3 rotation)
 			: this(vertexCount, translation, rotation, GMesh.DefaultScale) {}
 
-		public GMeshPlane(int2 vertexCount, float3 translation, float3 rotation, float2 scale)
+		public GMeshVoxPlane(int2 vertexCount, float3 translation, float3 rotation, float3 scale)
 		{
 			if (vertexCount.x < 2 || vertexCount.y < 2)
 				throw new ArgumentException("minimum of 2 vertices per axis required", nameof(vertexCount));

@@ -28,8 +28,7 @@ namespace CodeSmile.GraphMesh
 			Default = Vertices | Edges | Faces,
 		}
 
-		public override string ToString() =>
-			$"{GetType().Name} with {ValidFaceCount} faces, {ValidEdgeCount} edges, {ValidVertexCount} vertices, Pivot: {Pivot}";
+		public override string ToString() => $"{GetType().Name}: {_data}, Pivot: {Pivot}";
 
 		/// <summary>
 		/// Dump all elements for debugging purposes.

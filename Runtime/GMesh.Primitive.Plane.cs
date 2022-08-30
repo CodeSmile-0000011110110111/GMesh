@@ -29,7 +29,7 @@ namespace CodeSmile.GraphMesh
 			gMesh.ScheduleCreatePlane(parameters).Complete();
 			return gMesh;
 		}
-		
+
 		/// <summary>
 		/// Schedules jobs that create a plane based on input parameters.
 		/// Caller is responsible for calling Complete() on the returned JobHandle.
@@ -104,7 +104,6 @@ namespace CodeSmile.GraphMesh
 					Data.InitializeLoopsWithSize(subdivisions.x * subdivisions.y * 4);
 
 					// create quads
-					const int QuadElementCount = 4;
 					var vertIndices = new NativeArray<int>(QuadElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 					var edgeIndices = new NativeArray<int>(QuadElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
@@ -121,14 +120,10 @@ namespace CodeSmile.GraphMesh
 							vertIndices[3] = y * PlaneVertexCount.x + x + 1;
 
 							// Create or re-use Edges
-							var eIndex0 = Find.ExistingEdgeIndex(Data, vertIndices[0], vertIndices[1]);
-							var eIndex1 = Find.ExistingEdgeIndex(Data, vertIndices[1], vertIndices[2]);
-							var eIndex2 = Find.ExistingEdgeIndex(Data, vertIndices[2], vertIndices[3]);
-							var eIndex3 = Find.ExistingEdgeIndex(Data, vertIndices[3], vertIndices[0]);
-							edgeIndices[0] = eIndex0 != UnsetIndex ? eIndex0 : Create.Edge(Data, vertIndices[0], vertIndices[1]);
-							edgeIndices[1] = eIndex1 != UnsetIndex ? eIndex1 : Create.Edge(Data, vertIndices[1], vertIndices[2]);
-							edgeIndices[2] = eIndex2 != UnsetIndex ? eIndex2 : Create.Edge(Data, vertIndices[2], vertIndices[3]);
-							edgeIndices[3] = eIndex3 != UnsetIndex ? eIndex3 : Create.Edge(Data, vertIndices[3], vertIndices[0]);
+							edgeIndices[0] = Create.Edge(Data, vertIndices[0], vertIndices[1]);
+							edgeIndices[1] = Create.Edge(Data, vertIndices[1], vertIndices[2]);
+							edgeIndices[2] = Create.Edge(Data, vertIndices[2], vertIndices[3]);
+							edgeIndices[3] = Create.Edge(Data, vertIndices[3], vertIndices[0]);
 
 							// Create Face and Loops
 							Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);

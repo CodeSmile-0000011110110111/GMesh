@@ -201,12 +201,15 @@ namespace CodeSmile.GraphMesh
 				return (prevLoopIndex, nextLoopIndex);
 			}
 
-			public static int Edge(in GraphData data, int vertexIndexA, int vertexIndexO)
+			public static int Edge(in GraphData data, int vertexIndexA, int vertexIndexO, bool allowDuplicates = false)
 			{
-				// avoid edge duplication: if there is already an edge between edge[0] and edge[1] vertices, return existing edge instead
-				var existingEdgeIndex = Find.ExistingEdgeIndex(data, vertexIndexA, vertexIndexO);
-				if (existingEdgeIndex != UnsetIndex)
-					return existingEdgeIndex;
+				if (allowDuplicates == false)
+				{
+					// avoid edge duplication: if there is already an edge between edge[0] and edge[1] vertices, return existing edge instead
+					var existingEdgeIndex = Find.ExistingEdgeIndex(data, vertexIndexA, vertexIndexO);
+					if (existingEdgeIndex != UnsetIndex)
+						return existingEdgeIndex;
+				}
 
 				var edge = GMesh.Edge.Create(vertexIndexA, vertexIndexO);
 				var edgeIndex = data.AddEdge(ref edge);
