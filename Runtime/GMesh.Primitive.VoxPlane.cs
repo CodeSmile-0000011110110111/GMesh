@@ -4,10 +4,10 @@
 using System;
 using System.Runtime.InteropServices;
 using Unity.Burst;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
 using static Unity.Mathematics.math;
 using quaternion = Unity.Mathematics.quaternion;
 using Random = Unity.Mathematics.Random;
@@ -49,8 +49,6 @@ namespace CodeSmile.GraphMesh
 			var handle = gMesh.ScheduleCreateVoxPlane(parameters, normalizedHeightmap);
 			normalizedHeightmap.Dispose(handle);
 			handle.Complete();
-			
-			Debug.Log(gMesh);
 
 			return gMesh;
 		}
@@ -58,26 +56,129 @@ namespace CodeSmile.GraphMesh
 		public JobHandle ScheduleCreateVoxPlane(GMeshVoxPlane parameters, in NativeArray<float> normalizedHeightmap)
 		{
 			var vertexCount = new int2(parameters.VertexCountX, parameters.VertexCountY);
-			Debug.Log($"VoxPlane Quads: {(vertexCount.x -1) * (vertexCount.y - 1)}, Heightmap: {normalizedHeightmap.Length}");
-
 			var createJob = new VoxPlaneJobs.CreateVoxPlaneQuadsJob
 			{
 				Data = _data, Heightmap = normalizedHeightmap, PlaneVertexCount = vertexCount,
 				Translation = parameters.Translation, Rotation = parameters.Rotation, Scale = parameters.Scale,
 			};
 			createJob.Init();
-			return createJob.Schedule(normalizedHeightmap.Length, default);
+			var createHandle = createJob.Schedule(normalizedHeightmap.Length, default);
+
+			var borderJob = new VoxPlaneJobs.CreateVoxPlaneBorderJob
+			{
+				Data = _data, PlaneVertexCount = vertexCount,
+				Translation = parameters.Translation, Rotation = parameters.Rotation, Scale = parameters.Scale,
+			};
+			borderJob.Init();
+			return borderJob.Schedule(createHandle);
 		}
 
 		[BurstCompile]
 		private static class VoxPlaneJobs
 		{
-			public enum Neighbours
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+			public struct CreateVoxPlaneBorderJob : IJob
 			{
-				Left,
-				Up,
-				Right,
-				Down,
+				public GraphData Data;
+				public int2 PlaneVertexCount;
+				public float3 Translation;
+				public float3 Rotation;
+				public float3 Scale;
+
+				private int2 subdivisions;
+				private float3 centerOffset;
+				private float3 step;
+				private RigidTransform transform;
+
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> vertIndices;
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> edgeIndices;
+
+				/*
+				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<float> Heightmap;
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<float3> vertPositions;
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> vertIndices;
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> sideVertIndices;
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> edgeIndices;
+*/
+				public void Init()
+				{
+					subdivisions = PlaneVertexCount - 1;
+
+					transform = new RigidTransform(quaternion.Euler(radians(Rotation)), Translation);
+					centerOffset = float3(.5f, .5f, 0f) * Scale;
+					step = 1f / float3(subdivisions, 1f) * Scale;
+
+					vertIndices = new NativeArray<int>(QuadElementCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+					edgeIndices = new NativeArray<int>(QuadElementCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+				}
+
+				public void Execute()
+				{
+					int x = 0, y = 0, z = 0;
+
+					// WEST SIDE BORDER
+					for (y = 0; Hint.Likely(y < subdivisions.y); y++)
+					{
+						var baseY = y * subdivisions.x * QuadElementCount;
+						vertIndices[0] = Create.Vertex(Data, transform(transform, float3(x, y, 0f) * step - centerOffset));
+						vertIndices[1] = Create.Vertex(Data, transform(transform, float3(x, y + 1f, 0f) * step - centerOffset));
+						vertIndices[2] = baseY + 1;
+						vertIndices[3] = baseY;
+						edgeIndices[0] = Create.Edge(Data, vertIndices[0], vertIndices[1]);
+						edgeIndices[1] = Create.Edge(Data, vertIndices[1], vertIndices[2]);
+						edgeIndices[2] = Create.Edge(Data, vertIndices[2], vertIndices[3]);
+						edgeIndices[3] = Create.Edge(Data, vertIndices[3], vertIndices[0]);
+						Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
+					}
+
+					// EAST SIDE BORDER
+					x = subdivisions.x;
+					for (y = 0; Hint.Likely(y < subdivisions.y); y++)
+					{
+						var baseY = subdivisions.x * QuadElementCount + y * subdivisions.x * QuadElementCount - 1;
+						vertIndices[0] = baseY;
+						vertIndices[1] = baseY - 1;
+						vertIndices[2] = Create.Vertex(Data, transform(transform, float3(x, y + 1f, 0f) * step - centerOffset));
+						vertIndices[3] = Create.Vertex(Data, transform(transform, float3(x, y, 0f) * step - centerOffset));
+						edgeIndices[0] = Create.Edge(Data, vertIndices[0], vertIndices[1]);
+						edgeIndices[1] = Create.Edge(Data, vertIndices[1], vertIndices[2]);
+						edgeIndices[2] = Create.Edge(Data, vertIndices[2], vertIndices[3]);
+						edgeIndices[3] = Create.Edge(Data, vertIndices[3], vertIndices[0]);
+						Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
+					}
+
+					// SOUTH SIDE BORDER
+					y = 0;
+					for (x = 0; Hint.Likely(x < subdivisions.x); x++)
+					{
+						var baseX = x * QuadElementCount;
+						vertIndices[0] = Create.Vertex(Data, transform(transform, float3(x, y, 0f) * step - centerOffset));
+						vertIndices[1] = baseX;
+						vertIndices[2] = baseX + 3;
+						vertIndices[3] = Create.Vertex(Data, transform(transform, float3(x + 1f, y, 0f) * step - centerOffset));
+						edgeIndices[0] = Create.Edge(Data, vertIndices[0], vertIndices[1]);
+						edgeIndices[1] = Create.Edge(Data, vertIndices[1], vertIndices[2]);
+						edgeIndices[2] = Create.Edge(Data, vertIndices[2], vertIndices[3]);
+						edgeIndices[3] = Create.Edge(Data, vertIndices[3], vertIndices[0]);
+						Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
+					}
+					
+					// NORTH SIDE BORDER
+					y = subdivisions.y - 1;
+					for (x = 0; Hint.Likely(x < subdivisions.x); x++)
+					{
+						var baseX = x * QuadElementCount + y * subdivisions.x * QuadElementCount;
+						vertIndices[0] = baseX + 1;
+						vertIndices[1] = Create.Vertex(Data, transform(transform, float3(x, y + 1f, 0f) * step - centerOffset));
+						vertIndices[2] = Create.Vertex(Data, transform(transform, float3(x + 1f, y + 1f, 0f) * step - centerOffset));
+						vertIndices[3] = baseX + 2;
+						edgeIndices[0] = Create.Edge(Data, vertIndices[0], vertIndices[1]);
+						edgeIndices[1] = Create.Edge(Data, vertIndices[1], vertIndices[2]);
+						edgeIndices[2] = Create.Edge(Data, vertIndices[2], vertIndices[3]);
+						edgeIndices[3] = Create.Edge(Data, vertIndices[3], vertIndices[0]);
+						Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
+					}
+				}
 			}
 
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
@@ -95,7 +196,9 @@ namespace CodeSmile.GraphMesh
 				private float3 step;
 				private RigidTransform transform;
 
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<float3> vertPositions;
 				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> vertIndices;
+				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> sideVertIndices;
 				[DeallocateOnJobCompletion] [NativeDisableParallelForRestriction] private NativeArray<int> edgeIndices;
 
 				public void Init()
@@ -103,90 +206,74 @@ namespace CodeSmile.GraphMesh
 					subdivisions = PlaneVertexCount - 1;
 
 					// set expected number of vertices directly
-					//Data.ValidVertexCount = subdivisions.x * subdivisions.y * QuadElementCount;
-					//Data.InitializeVerticesWithSize(Data.ValidVertexCount);
+					var expectedVertexCount = subdivisions.x * subdivisions.y * QuadElementCount;
+					Data.InitializeVerticesWithSize(expectedVertexCount);
 
 					transform = new RigidTransform(quaternion.Euler(radians(Rotation)), Translation);
 					centerOffset = float3(.5f, .5f, 0f) * Scale;
 					step = 1f / float3(subdivisions, 1f) * Scale;
 
+					vertPositions = new NativeArray<float3>(QuadElementCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 					vertIndices = new NativeArray<int>(QuadElementCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+					sideVertIndices = new NativeArray<int>(QuadElementCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 					edgeIndices = new NativeArray<int>(QuadElementCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 				}
 
 				public void Execute(int heightmapIndex)
 				{
-					//var quadVertices = new QuadVertices();
-					{
-						var x = heightmapIndex % subdivisions.x;
-						var y = heightmapIndex / subdivisions.x;
-						var z = -Heightmap[heightmapIndex];
+					// TODO: vertices could be generated up-front in parallel
 
-						var pos = transform(transform, float3(x, y, z) * step - centerOffset);
-						vertIndices[0] = Create.Vertex(Data, pos);
-						pos = transform(transform, float3(x, y + 1f, z) * step - centerOffset);
-						vertIndices[1] = Create.Vertex(Data, pos);
-						pos = transform(transform, float3(x + 1f, y + 1f, z) * step - centerOffset);
-						vertIndices[2] = Create.Vertex(Data, pos);
-						pos = transform(transform, float3(x + 1f, y, z) * step - centerOffset);
-						vertIndices[3] = Create.Vertex(Data, pos);
+					var x = heightmapIndex % subdivisions.x;
+					var y = heightmapIndex / subdivisions.x;
+					var z = -Heightmap[heightmapIndex];
 
+					{ // TOPMOST QUAD
+						vertPositions[0] = transform(transform, float3(x, y, z) * step - centerOffset);
+						vertPositions[1] = transform(transform, float3(x, y + 1f, z) * step - centerOffset);
+						vertPositions[2] = transform(transform, float3(x + 1f, y + 1f, z) * step - centerOffset);
+						vertPositions[3] = transform(transform, float3(x + 1f, y, z) * step - centerOffset);
+						vertIndices[0] = Create.Vertex(Data, vertPositions[0]);
+						vertIndices[1] = Create.Vertex(Data, vertPositions[1]);
+						vertIndices[2] = Create.Vertex(Data, vertPositions[2]);
+						vertIndices[3] = Create.Vertex(Data, vertPositions[3]);
 						edgeIndices[0] = Create.Edge(Data, vertIndices[0], vertIndices[1], true);
 						edgeIndices[1] = Create.Edge(Data, vertIndices[1], vertIndices[2], true);
 						edgeIndices[2] = Create.Edge(Data, vertIndices[2], vertIndices[3], true);
 						edgeIndices[3] = Create.Edge(Data, vertIndices[3], vertIndices[0], true);
-
-						// Create Face and Loops
 						Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
-						Debug.Log($"{heightmapIndex}: {Data}");
 					}
 
-					/*
+					if (Hint.Likely(x > 0))
+					{ // WEST SIDE QUAD
+						sideVertIndices[0] = vertIndices[0] - 1;
+						sideVertIndices[1] = vertIndices[0] - 2;
+						sideVertIndices[2] = vertIndices[1];
+						sideVertIndices[3] = vertIndices[0];
+						edgeIndices[0] = Create.Edge(Data, sideVertIndices[0], sideVertIndices[1]);
+						edgeIndices[1] = Create.Edge(Data, sideVertIndices[1], sideVertIndices[2]);
+						edgeIndices[2] = Create.Edge(Data, sideVertIndices[2], sideVertIndices[3]);
+						edgeIndices[3] = Create.Edge(Data, sideVertIndices[3], sideVertIndices[0]);
+						Create.Loops(Data, Create.Face(Data, QuadElementCount), sideVertIndices, edgeIndices);
+					}
+
+					// SOUTH SIDE QUAD
+					if (Hint.Likely(y > 0))
 					{
-						// init lists
-						// TODO: initialize edges with count (shared inner edges vs border edges - there's an algorithm to be found)
-						Data.InitializeFacesWithSize(subdivisions.x * subdivisions.y);
-						Data.InitializeLoopsWithSize(subdivisions.x * subdivisions.y * 4);
-
-						// create quads
-						const int QuadElementCount = 4;
-						var vertIndices = new NativeArray<int>(QuadElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-						var edgeIndices = new NativeArray<int>(QuadElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-
-						for (var y = 0; y < subdivisions.y; y++)
-						{
-							for (var x = 0; x < subdivisions.x; x++)
-							{
-								// each quad has (0,0) in the lower left corner with verts: v0=down-left, v1=up-left, v2=up-right, v3=down-right
-
-								// calculate quad's vertex indices
-								vertIndices[0] = y * PlaneVertexCount.x + x;
-								vertIndices[1] = (y + 1) * PlaneVertexCount.x + x;
-								vertIndices[2] = (y + 1) * PlaneVertexCount.x + x + 1;
-								vertIndices[3] = y * PlaneVertexCount.x + x + 1;
-
-								// Create or re-use Edges
-								var eIndex0 = Find.ExistingEdgeIndex(Data, vertIndices[0], vertIndices[1]);
-								var eIndex1 = Find.ExistingEdgeIndex(Data, vertIndices[1], vertIndices[2]);
-								var eIndex2 = Find.ExistingEdgeIndex(Data, vertIndices[2], vertIndices[3]);
-								var eIndex3 = Find.ExistingEdgeIndex(Data, vertIndices[3], vertIndices[0]);
-								edgeIndices[0] = eIndex0 != UnsetIndex ? eIndex0 : Create.Edge(Data, vertIndices[0], vertIndices[1]);
-								edgeIndices[1] = eIndex1 != UnsetIndex ? eIndex1 : Create.Edge(Data, vertIndices[1], vertIndices[2]);
-								edgeIndices[2] = eIndex2 != UnsetIndex ? eIndex2 : Create.Edge(Data, vertIndices[2], vertIndices[3]);
-								edgeIndices[3] = eIndex3 != UnsetIndex ? eIndex3 : Create.Edge(Data, vertIndices[3], vertIndices[0]);
-
-								// Create Face and Loops
-								Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
-							}
-						}
-
-						vertIndices.Dispose();
-						edgeIndices.Dispose();
+						var yIndexOffset = subdivisions.x * QuadElementCount;
+						sideVertIndices[0] = vertIndices[0] - yIndexOffset + 1;
+						sideVertIndices[1] = vertIndices[0];
+						sideVertIndices[2] = vertIndices[3];
+						sideVertIndices[3] = vertIndices[0] - yIndexOffset + 2;
+						edgeIndices[0] = Create.Edge(Data, sideVertIndices[0], sideVertIndices[1]);
+						edgeIndices[1] = Create.Edge(Data, sideVertIndices[1], sideVertIndices[2]);
+						edgeIndices[2] = Create.Edge(Data, sideVertIndices[2], sideVertIndices[3]);
+						edgeIndices[3] = Create.Edge(Data, sideVertIndices[3], sideVertIndices[0]);
+						Create.Loops(Data, Create.Face(Data, QuadElementCount), sideVertIndices, edgeIndices);
 					}
-					*/
 				}
 			}
 
+			/*
 			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
 			public struct QuadVertices
 			{
@@ -195,114 +282,8 @@ namespace CodeSmile.GraphMesh
 				public readonly float3 NorthV0;
 				public readonly float3 EastV0;
 				public readonly float3 SouthV0;
-
-				// preprocess neighbour heights?
-
-				/*
-				// y coordinate (height) of current face
-				public readonly float FaceY;
-
-
-				// vertices of surrounding faces to determine side faces (if any)
-				// V0/V1 go along the loops in clockwise order, with V0 being the loop's start vertex
-				public readonly float3 SideWestV0;
-				public readonly float3 SideWestV1;
-				public readonly float3 SideNorthV0;
-				public readonly float3 SideNorthV1;
-				public readonly float3 SideEastV0;
-				public readonly float3 SideEastV1;
-				public readonly float3 SideSouthV0;
-				public readonly float3 SideSouthV1;
-				*/
 			}
-
-			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-			public struct CreatePlaneVerticesJob : IJobParallelFor
-			{
-				public readonly int2 PlaneVertexCount;
-				public readonly float3 Translation;
-				public readonly float3 Rotation;
-				public readonly float3 Scale;
-				[ReadOnly] public NativeArray<float> Heightmap;
-
-				[WriteOnly] private NativeArray<Vertex> Vertices;
-				private float3 centerOffset;
-				private float3 step;
-				private RigidTransform transform;
-
-				public void Init(ref GraphData data, int expectedVertexCount)
-				{
-					// set expected number of vertices directly
-					data.ValidVertexCount = expectedVertexCount;
-					data.InitializeVerticesWithSize(expectedVertexCount);
-					Vertices = data.VerticesAsWritableArray;
-
-					transform = new RigidTransform(quaternion.Euler(radians(Rotation)), Translation);
-					var subdivisions = PlaneVertexCount - 1;
-					centerOffset = float3(.5f, .5f, 0f) * Scale;
-					step = 1f / float3(subdivisions, 1f) * Scale;
-				}
-
-				public void Execute(int index)
-				{
-					var x = index % PlaneVertexCount.x;
-					var y = index / PlaneVertexCount.x;
-					var z = Heightmap[index];
-					var pos = transform(transform, float3(x, y, z) * step - centerOffset);
-					Vertices[index] = new Vertex { Index = index, BaseEdgeIndex = UnsetIndex, Position = pos };
-				}
-			}
-
-			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
-			public struct CreatePlaneQuadsJob : IJob
-			{
-				public GraphData Data;
-				public int2 PlaneVertexCount;
-
-				public void Execute()
-				{
-					// init lists
-					var subdivisions = PlaneVertexCount - 1;
-					// TODO: initialize edges with count (shared inner edges vs border edges - there's an algorithm to be found)
-					Data.InitializeFacesWithSize(subdivisions.x * subdivisions.y);
-					Data.InitializeLoopsWithSize(subdivisions.x * subdivisions.y * 4);
-
-					// create quads
-					const int QuadElementCount = 4;
-					var vertIndices = new NativeArray<int>(QuadElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-					var edgeIndices = new NativeArray<int>(QuadElementCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-
-					for (var y = 0; y < subdivisions.y; y++)
-					{
-						for (var x = 0; x < subdivisions.x; x++)
-						{
-							// each quad has (0,0) in the lower left corner with verts: v0=down-left, v1=up-left, v2=up-right, v3=down-right
-
-							// calculate quad's vertex indices
-							vertIndices[0] = y * PlaneVertexCount.x + x;
-							vertIndices[1] = (y + 1) * PlaneVertexCount.x + x;
-							vertIndices[2] = (y + 1) * PlaneVertexCount.x + x + 1;
-							vertIndices[3] = y * PlaneVertexCount.x + x + 1;
-
-							// Create or re-use Edges
-							var eIndex0 = Find.ExistingEdgeIndex(Data, vertIndices[0], vertIndices[1]);
-							var eIndex1 = Find.ExistingEdgeIndex(Data, vertIndices[1], vertIndices[2]);
-							var eIndex2 = Find.ExistingEdgeIndex(Data, vertIndices[2], vertIndices[3]);
-							var eIndex3 = Find.ExistingEdgeIndex(Data, vertIndices[3], vertIndices[0]);
-							edgeIndices[0] = eIndex0 != UnsetIndex ? eIndex0 : Create.Edge(Data, vertIndices[0], vertIndices[1]);
-							edgeIndices[1] = eIndex1 != UnsetIndex ? eIndex1 : Create.Edge(Data, vertIndices[1], vertIndices[2]);
-							edgeIndices[2] = eIndex2 != UnsetIndex ? eIndex2 : Create.Edge(Data, vertIndices[2], vertIndices[3]);
-							edgeIndices[3] = eIndex3 != UnsetIndex ? eIndex3 : Create.Edge(Data, vertIndices[3], vertIndices[0]);
-
-							// Create Face and Loops
-							Create.Loops(Data, Create.Face(Data, QuadElementCount), vertIndices, edgeIndices);
-						}
-					}
-
-					vertIndices.Dispose();
-					edgeIndices.Dispose();
-				}
-			}
+			*/
 		}
 	}
 }

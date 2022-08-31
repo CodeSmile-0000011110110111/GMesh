@@ -11,6 +11,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Random = System.Random;
 
 namespace CodeSmile.GraphMesh
 {
@@ -56,9 +57,15 @@ namespace CodeSmile.GraphMesh
 			gatherDataHandle.Complete();
 
 			// PREPARE VERTEX BUFFER
+			/*
 			var attributes = new NativeArray<VertexAttributeDescriptor>(MeshJobs.VertexPositionNormalUV.AttributeCount, Allocator.Temp,
 				NativeArrayOptions.UninitializedMemory);
 			MeshJobs.VertexPositionNormalUV.GetAttributes(ref attributes);
+			*/
+			var attributes = new NativeArray<VertexAttributeDescriptor>(MeshJobs.VertexPositionNormalColor.AttributeCount, Allocator.Temp,
+				NativeArrayOptions.UninitializedMemory);
+			MeshJobs.VertexPositionNormalColor.GetAttributes(ref attributes);
+
 			var totalVertexCount = totalVCount.Value;
 			meshData.SetVertexBufferParams(totalVertexCount, attributes);
 			attributes.Dispose();
@@ -72,7 +79,8 @@ namespace CodeSmile.GraphMesh
 			var triangulateJob = new MeshJobs.FanTriangulateFacesJob
 			{
 				Faces = faces, Loops = Loops, Vertices = Vertices, TriangleStartIndices = triangleStartIndices,
-				VBuffer = meshData.GetVertexData<MeshJobs.VertexPositionNormalUV>(),
+				//VBuffer = meshData.GetVertexData<MeshJobs.VertexPositionNormalUV>(),
+				VBuffer = meshData.GetVertexData<MeshJobs.VertexPositionNormalColor>(),
 				IBuffer16 = indicesAre16Bit ? meshData.GetIndexData<ushort>() : default,
 				IBuffer32 = indicesAre16Bit ? default : meshData.GetIndexData<uint>(),
 				IsIndexBuffer16Bit = indicesAre16Bit,
@@ -93,8 +101,8 @@ namespace CodeSmile.GraphMesh
 			// RECALCULATE
 			mesh.RecalculateBounds();
 			mesh.RecalculateNormals();
-
-			//mesh.name = ToString();
+			//mesh.RecalculateTangents();
+			
 			return mesh;
 		}
 
@@ -132,7 +140,8 @@ namespace CodeSmile.GraphMesh
 				[ReadOnly] [NativeDisableParallelForRestriction] public NativeArray<int> TriangleStartIndices;
 
 				[WriteOnly] [NoAlias] [NativeDisableParallelForRestriction] [NativeDisableContainerSafetyRestriction]
-				public NativeArray<VertexPositionNormalUV> VBuffer;
+				//public NativeArray<VertexPositionNormalUV> VBuffer;
+				public NativeArray<VertexPositionNormalColor> VBuffer;
 
 				[WriteOnly] [NoAlias] [NativeDisableParallelForRestriction] [NativeDisableContainerSafetyRestriction]
 				public NativeArray<ushort> IBuffer16;
@@ -178,7 +187,11 @@ namespace CodeSmile.GraphMesh
 							}
 
 							SetBuffer(iIndex++, triangleStartVertIndex + triangleVertIndex);
-							VBuffer[vIndex++] = new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero);
+							
+							//VBuffer[vIndex++] = new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero);
+							var rand = Unity.Mathematics.Random.CreateFromIndex((uint)loopIndex).NextUInt3(0, 255);
+							var color = new Color32((byte)rand.x, (byte)rand.y, (byte)rand.z, 255);
+							VBuffer[vIndex++] = new VertexPositionNormalColor(loopVert.Position, float3.zero, color);
 
 							triangleVertIndex++;
 
@@ -214,6 +227,35 @@ namespace CodeSmile.GraphMesh
 						{ attribute = VertexAttribute.Normal, format = VertexAttributeFormat.Float32, dimension = 3, stream = 0 };
 					attributes[2] = new VertexAttributeDescriptor
 						{ attribute = VertexAttribute.TexCoord0, format = VertexAttributeFormat.Float32, dimension = 2, stream = 0 };
+				}
+			}
+			
+			[BurstCompile] [StructLayout(LayoutKind.Sequential)]
+			public struct VertexPositionNormalColor
+			{
+				public readonly float3 Position;
+				public readonly float3 Normal;
+				public readonly Color32 Color;
+
+				public override string ToString() => $"Pos {Position}, Color {Color}";
+
+				public VertexPositionNormalColor(float3 position, float3 normal, Color32 color)
+				{
+					Position = position;
+					Normal = normal;
+					Color = color;
+				}
+
+				public static int AttributeCount => 3;
+
+				public static void GetAttributes(ref NativeArray<VertexAttributeDescriptor> attributes)
+				{
+					attributes[0] = new VertexAttributeDescriptor
+						{ attribute = VertexAttribute.Position, format = VertexAttributeFormat.Float32, dimension = 3, stream = 0 };
+					attributes[1] = new VertexAttributeDescriptor
+						{ attribute = VertexAttribute.Normal, format = VertexAttributeFormat.Float32, dimension = 3, stream = 0 };
+					attributes[2] = new VertexAttributeDescriptor
+						{ attribute = VertexAttribute.Color, format = VertexAttributeFormat.UNorm8, dimension = 4, stream = 0 };
 				}
 			}
 		}

@@ -67,7 +67,7 @@ namespace CodeSmile.GraphMesh
 			var textStyle = new GUIStyle();
 			textStyle.alignment = TextAnchor.UpperCenter;
 			textStyle.normal.textColor = vertColor;
-			textStyle.fontSize = 12;
+			textStyle.fontSize = 9;
 
 			var highlightErrors = debugDraw.HasFlag(DebugDraw.HighlightGraphErrors);
 
@@ -123,8 +123,12 @@ namespace CodeSmile.GraphMesh
 					if (drawIndices)
 						Handles.Label(vPos, v.Index.ToString(), style);
 
-					var edgeCenter = math.transform(t, CalculateEdgeCenter(v.BaseEdgeIndex) * scale);
-					Handles.DrawBezier(vPos, edgeCenter, vPos, edgeCenter, lineColor, null, lineThickness);
+					// in case we have non-connected vertices we cannot draw the line
+					if (v.BaseEdgeIndex != UnsetIndex)
+					{
+						var edgeCenter = math.transform(t, CalculateEdgeCenter(v.BaseEdgeIndex) * scale);
+						Handles.DrawBezier(vPos, edgeCenter, vPos, edgeCenter, lineColor, null, lineThickness);
+					}
 				}
 			}
 			catch (Exception e)
@@ -156,14 +160,17 @@ namespace CodeSmile.GraphMesh
 					if (e.IsValid == false)
 						continue;
 
-					var v0 = math.transform(t, GetVertex(e.AVertexIndex).Position * scale);
-					var v1 = math.transform(t, GetVertex(e.OVertexIndex).Position * scale);
-					Handles.DrawBezier(v0, v1, v0, v1, lineColor, null, lineThickness);
-
-					if (drawIndices)
+					if (e.AreVerticesValid)
 					{
-						var edgeCenter = CalculateCenter(v0, v1);
-						Handles.Label(edgeCenter, e.Index.ToString(), style);
+						var v0 = math.transform(t, GetVertex(e.AVertexIndex).Position * scale);
+						var v1 = math.transform(t, GetVertex(e.OVertexIndex).Position * scale);
+						Handles.DrawBezier(v0, v1, v0, v1, lineColor, null, lineThickness);
+
+						if (drawIndices)
+						{
+							var edgeCenter = CalculateCenter(v0, v1);
+							Handles.Label(edgeCenter, e.Index.ToString(), style);
+						}
 					}
 				}
 			}
@@ -187,7 +194,7 @@ namespace CodeSmile.GraphMesh
 				var lineThickness = 2f;
 				var scale = (float3)transform.localScale;
 				var t = new RigidTransform(transform.rotation, transform.position);
-				var prevNextFontSizeOffset = 3;
+				var prevNextFontSizeOffset = 2;
 				var txColor = style.normal.textColor;
 				var lineDarken = 0.5f;
 				var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
@@ -242,43 +249,47 @@ namespace CodeSmile.GraphMesh
 
 					Handles.DrawBezier(mainEdgeV0, mainEdgeV1, mainEdgeV0, mainEdgeV1, lineColor, null, lineThickness);
 
-					var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
-					var toV0Next = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0NextEdge) * scale) - mainEdgeV0) * edgeCutOff;
-					Handles.DrawBezier(mainEdgeV0, toV0Prev, mainEdgeV0, toV0Prev, lineColor, null, lineThickness);
-					if (e.APrevEdgeIndex != e.ANextEdgeIndex)
-						Handles.DrawBezier(mainEdgeV0, toV0Next, mainEdgeV0, toV0Next, lineColor, null, lineThickness);
-
-					var toV1Prev = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1PrevEdge) * scale) - mainEdgeV1) * edgeCutOff;
-					var toV1Next = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1NextEdge) * scale) - mainEdgeV1) * edgeCutOff;
-					Handles.DrawBezier(mainEdgeV1, toV1Prev, mainEdgeV1, toV1Prev, lineColor, null, lineThickness);
-					if (e.OPrevEdgeIndex != e.ONextEdgeIndex)
-						Handles.DrawBezier(mainEdgeV1, toV1Next, mainEdgeV1, toV1Next, lineColor, null, lineThickness);
-
-					if (drawIndices)
+					if (v0PrevEdge.AreVerticesValid && v0NextEdge.AreVerticesValid && v1PrevEdge.AreVerticesValid &&
+					    v1NextEdge.AreVerticesValid)
 					{
-						style.fontSize += -prevNextFontSizeOffset;
-						var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 5f;
-						var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 5f;
-						Handles.Label(textEdgeV0, "V0", style);
-						Handles.Label(textEdgeV1, "V1", style);
+						var toV0Prev = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0PrevEdge) * scale) - mainEdgeV0) * edgeCutOff;
+						var toV0Next = mainEdgeV0 + (math.transform(t, CalculateEdgeCenter(v0NextEdge) * scale) - mainEdgeV0) * edgeCutOff;
+						Handles.DrawBezier(mainEdgeV0, toV0Prev, mainEdgeV0, toV0Prev, lineColor, null, lineThickness);
 						if (e.APrevEdgeIndex != e.ANextEdgeIndex)
-						{
-							Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}", style);
-							Handles.Label(toV0Next, $"{e.ANextEdgeIndex}>", style);
-						}
-						else
-							Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}>", style);
-						if (e.OPrevEdgeIndex != e.ONextEdgeIndex)
-						{
-							Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}", style);
-							Handles.Label(toV1Next, $"{e.ONextEdgeIndex}>", style);
-						}
-						else
-							Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}>", style);
+							Handles.DrawBezier(mainEdgeV0, toV0Next, mainEdgeV0, toV0Next, lineColor, null, lineThickness);
 
-						var edgeCenter = CalculateCenter(v0Pos, v1Pos);
-						Handles.Label(edgeCenter, $"{e.Index} (L{e.BaseLoopIndex})", style);
-						style.fontSize += prevNextFontSizeOffset;
+						var toV1Prev = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1PrevEdge) * scale) - mainEdgeV1) * edgeCutOff;
+						var toV1Next = mainEdgeV1 + (math.transform(t, CalculateEdgeCenter(v1NextEdge) * scale) - mainEdgeV1) * edgeCutOff;
+						Handles.DrawBezier(mainEdgeV1, toV1Prev, mainEdgeV1, toV1Prev, lineColor, null, lineThickness);
+						if (e.OPrevEdgeIndex != e.ONextEdgeIndex)
+							Handles.DrawBezier(mainEdgeV1, toV1Next, mainEdgeV1, toV1Next, lineColor, null, lineThickness);
+
+						if (drawIndices)
+						{
+							style.fontSize += -prevNextFontSizeOffset;
+							var textEdgeV0 = v0Pos + edgeDir * edgeCutOff * 5f;
+							var textEdgeV1 = v1Pos - edgeDir * edgeCutOff * 5f;
+							Handles.Label(textEdgeV0, "V0", style);
+							Handles.Label(textEdgeV1, "V1", style);
+							if (e.APrevEdgeIndex != e.ANextEdgeIndex)
+							{
+								Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}", style);
+								Handles.Label(toV0Next, $"{e.ANextEdgeIndex}>", style);
+							}
+							else
+								Handles.Label(toV0Prev, $"<{e.APrevEdgeIndex}>", style);
+							if (e.OPrevEdgeIndex != e.ONextEdgeIndex)
+							{
+								Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}", style);
+								Handles.Label(toV1Next, $"{e.ONextEdgeIndex}>", style);
+							}
+							else
+								Handles.Label(toV1Prev, $"<{e.OPrevEdgeIndex}>", style);
+
+							var edgeCenter = CalculateCenter(v0Pos, v1Pos);
+							Handles.Label(edgeCenter, $"{e.Index} (L{e.BaseLoopIndex})", style);
+							style.fontSize += prevNextFontSizeOffset;
+						}
 					}
 				}
 			}
@@ -299,7 +310,7 @@ namespace CodeSmile.GraphMesh
 		{
 			try
 			{
-				var prevNextFontSizeOffset = 3;
+				var prevNextFontSizeOffset = 2;
 				var lineThickness = 2f;
 				var scale = (float3)transform.localScale;
 				var t = new RigidTransform(transform.rotation, transform.position);
@@ -408,7 +419,7 @@ namespace CodeSmile.GraphMesh
 				var lineDarken = 0.5f;
 				var lineColor = new Color(txColor.r * lineDarken, txColor.g * lineDarken, txColor.b * lineDarken);
 				var loopBulge = 0.33f;
-				var prevNextFontSizeOffset = 3;
+				var prevNextFontSizeOffset = 2;
 
 				Gizmos.matrix = transform.localToWorldMatrix;
 				foreach (var f in Faces)
@@ -491,7 +502,5 @@ namespace CodeSmile.GraphMesh
 				Debug.LogWarning("DrawGizmos: " + e);
 			}
 		}
-
-
 	}
 }

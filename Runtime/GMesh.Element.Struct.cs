@@ -117,6 +117,11 @@ namespace CodeSmile.GraphMesh
 			public bool IsValid => Index != UnsetIndex;
 
 			/// <summary>
+			/// True if both vertex indices are not equal to UnsetIndex.
+			/// </summary>
+			public bool AreVerticesValid => AVertexIndex != UnsetIndex && OVertexIndex != UnsetIndex;
+			
+			/// <summary>
 			/// Access vertex A and O by their indices (0 or 1).
 			/// </summary>
 			/// <param name="index">Returns A's index if index is 0. Returns O's index if index is 1.
