@@ -12,7 +12,7 @@ namespace CodeSmile
 	public class GMeshPlane
 	{
 		public const int MinVertexCount = 2;
-		public const int MaxVertexCount = 101;
+		public const int MaxVertexCount = 129;
 		public static readonly float3 DefaultRotation = new(90f, 0f, 0f);
 
 		public bool ResetToDefaults;

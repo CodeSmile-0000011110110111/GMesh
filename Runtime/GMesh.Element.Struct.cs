@@ -5,6 +5,7 @@ using System;
 using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace CodeSmile.GraphMesh
 {
@@ -28,9 +29,20 @@ namespace CodeSmile.GraphMesh
 			/// Position of the vertex in mesh (local) space.
 			/// </summary>
 			public float3 Position;
+			//public float3 Normal; // recalculate for now
+			//public float3 Tangent; // recalculate if needed
+			
+			/// <summary>
+			/// Vertex color in RGBA byte format (same as Color32).
+			/// xyzw = rgba
+			/// </summary>
+			public Color32 Color;
+			//public float2 UV; // support will be added later
 
 			internal static Vertex Create(float3 position, int baseEdgeIndex = UnsetIndex) => new()
-				{ Index = UnsetIndex, BaseEdgeIndex = baseEdgeIndex, Position = position };
+				{ Index = UnsetIndex, BaseEdgeIndex = baseEdgeIndex, Position = position, Color = new Color32() };
+			internal static Vertex Create(float3 position, Color32 color, int baseEdgeIndex = UnsetIndex) => new()
+				{ Index = UnsetIndex, BaseEdgeIndex = baseEdgeIndex, Position = position, Color = color };
 
 			/// <summary>
 			/// True if the element hasn't been flagged for deletion.

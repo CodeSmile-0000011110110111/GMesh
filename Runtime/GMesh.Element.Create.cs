@@ -5,6 +5,7 @@ using Unity.Burst;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace CodeSmile.GraphMesh
 {
@@ -295,6 +296,12 @@ namespace CodeSmile.GraphMesh
 			public static int Vertex(in GraphData data, float3 position)
 			{
 				var vertex = GMesh.Vertex.Create(position);
+				return data.AddVertex(ref vertex);
+			}
+			
+			public static int Vertex(in GraphData data, float3 position, Color32 color)
+			{
+				var vertex = GMesh.Vertex.Create(position, color);
 				return data.AddVertex(ref vertex);
 			}
 

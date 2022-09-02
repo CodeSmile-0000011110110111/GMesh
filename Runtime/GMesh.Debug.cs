@@ -2,6 +2,7 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using System.Text;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
@@ -33,22 +34,40 @@ namespace CodeSmile.GraphMesh
 		/// <summary>
 		/// Dump all elements for debugging purposes.
 		/// </summary>
-		public void DebugLogAllElements(string headerMessage = "")
+		/// <param name="asSingleLine"></param>
+		public void DebugLogAllElements(bool asSingleLine) => DebugLogAllElements(string.Empty, asSingleLine);
+
+		/// <summary>
+		/// Dump all elements for debugging purposes.
+		/// </summary>
+		/// <param name="headerMessage">custom string printed as first line</param>
+		/// <param name="asSingleLine">output is logged with single call to Debug.Log()</param>
+		public void DebugLogAllElements(string headerMessage = "", bool asSingleLine = false)
 		{
 			try
 			{
-				if (string.IsNullOrWhiteSpace(headerMessage) == false)
-					Debug.Log(headerMessage);
+				var sb = new StringBuilder();
 
-				Debug.Log(this);
+				if (string.IsNullOrWhiteSpace(headerMessage) == false)
+					sb.AppendLine(headerMessage);
+
+				sb.AppendLine(ToString());
 				for (var i = 0; i < ValidFaceCount; i++)
-					Debug.Log(GetFace(i));
+					sb.AppendLine(GetFace(i).ToString());
 				for (var i = 0; i < ValidLoopCount; i++)
-					Debug.Log(GetLoop(i));
+					sb.AppendLine(GetLoop(i).ToString());
 				for (var i = 0; i < ValidEdgeCount; i++)
-					Debug.Log(GetEdge(i));
+					sb.AppendLine(GetEdge(i).ToString());
 				for (var i = 0; i < ValidVertexCount; i++)
-					Debug.Log(GetVertex(i));
+					sb.AppendLine(GetVertex(i).ToString());
+
+				if (asSingleLine)
+					Debug.Log(sb);
+				else
+				{
+					foreach (var line in sb.ToString().Split(Environment.NewLine))
+						Debug.Log(line);
+				}
 			}
 			catch (Exception e)
 			{
@@ -56,7 +75,7 @@ namespace CodeSmile.GraphMesh
 			}
 		}
 
-		public void DebugDrawGizmos(UnityEngine.Transform transform, DebugDraw debugDraw = DebugDraw.Default)
+		public void DebugDrawGizmos(UnityEngine.Transform transform, DebugDraw debugDraw = DebugDraw.Default, int fontSize = 9)
 		{
 			var vertColor = Color.cyan;
 			var edgeColor = Color.yellow;
@@ -67,7 +86,7 @@ namespace CodeSmile.GraphMesh
 			var textStyle = new GUIStyle();
 			textStyle.alignment = TextAnchor.UpperCenter;
 			textStyle.normal.textColor = vertColor;
-			textStyle.fontSize = 9;
+			textStyle.fontSize = fontSize;
 
 			var highlightErrors = debugDraw.HasFlag(DebugDraw.HighlightGraphErrors);
 

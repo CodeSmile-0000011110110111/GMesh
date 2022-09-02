@@ -2,11 +2,13 @@
 // Refer to included LICENSE file for terms and conditions.
 
 using System;
+using UnityEngine;
 
 namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
+		
 		/// <summary>
 		/// Moves (snaps) all vertex positions to an imaginary grid given by gridSize.
 		/// For example, if gridSize is 0.01f all vertices are snapped to the nearest 1cm coordinate.

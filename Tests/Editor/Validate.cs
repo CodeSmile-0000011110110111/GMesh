@@ -1,11 +1,8 @@
 ﻿// Copyright (C) 2021-2022 Steffen Itterheim
 // Refer to included LICENSE file for terms and conditions.
 
-using CodeSmile;
 using CodeSmile.GraphMesh;
 using NUnit.Framework;
-using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 
 public static class Validate
@@ -269,19 +266,6 @@ public static class Validate
 			if (face.IsValid)
 				Assert.AreEqual(i, face.Index, "face index");
 		}
-	}
-
-	public static void CreateBMeshForComparison(IList<float3> vertices)
-	{
-		var bmesh = new BMesh();
-		bmesh.AddVertex(vertices[0]);
-		bmesh.AddVertex(vertices[1]);
-		bmesh.AddVertex(vertices[2]);
-		bmesh.AddEdge(0, 1);
-		bmesh.AddEdge(1, 2);
-		bmesh.AddEdge(2, 0);
-		bmesh.AddFace(0, 1, 2);
-		bmesh.DebugLogAllElements();
 	}
 
 	public static void MeshElementCount(GMesh mesh, int faceCount, int loopCount, int edgeCount, int vertexCount)

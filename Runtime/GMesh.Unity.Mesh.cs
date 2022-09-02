@@ -11,7 +11,8 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
-using Random = System.Random;
+
+using math = Unity.Mathematics.math;
 
 namespace CodeSmile.GraphMesh
 {
@@ -163,7 +164,7 @@ namespace CodeSmile.GraphMesh
 					// TODO: try triangle strip triangulation
 					// 2->0->1 then 3->2->1 then 4->2->3 then 5->4->3
 					// https://en.wikipedia.org/wiki/Triangle_strip
-
+					
 					// Fan triangulation: Tesselate into triangles where all originate from loop's first vertex
 					// => only guaranteed to work with convex polygons
 					var loop = Loops[loopIndex];
@@ -189,9 +190,7 @@ namespace CodeSmile.GraphMesh
 							SetBuffer(iIndex++, triangleStartVertIndex + triangleVertIndex);
 							
 							//VBuffer[vIndex++] = new VertexPositionNormalUV(loopVert.Position, float3.zero, float2.zero);
-							var rand = Unity.Mathematics.Random.CreateFromIndex((uint)loopIndex).NextUInt3(0, 255);
-							var color = new Color32((byte)rand.x, (byte)rand.y, (byte)rand.z, 255);
-							VBuffer[vIndex++] = new VertexPositionNormalColor(loopVert.Position, float3.zero, color);
+							VBuffer[vIndex++] = new VertexPositionNormalColor(loopVert.Position, math.forward(), loopVert.Color);
 
 							triangleVertIndex++;
 
@@ -235,7 +234,7 @@ namespace CodeSmile.GraphMesh
 			{
 				public readonly float3 Position;
 				public readonly float3 Normal;
-				public readonly Color32 Color;
+				public Color32 Color;
 
 				public override string ToString() => $"Pos {Position}, Color {Color}";
 

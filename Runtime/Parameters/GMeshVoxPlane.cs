@@ -12,7 +12,7 @@ namespace CodeSmile
 	public class GMeshVoxPlane
 	{
 		public const int MinVertexCount = 2;
-		public const int MaxVertexCount = 101;
+		public const int MaxVertexCount = 257;
 		public static readonly float3 DefaultRotation = new(90f, 0f, 0f);
 
 		public bool ResetToDefaults;
@@ -20,6 +20,7 @@ namespace CodeSmile
 		[Range(MinVertexCount, MaxVertexCount)] public int VertexCountY = MinVertexCount;
 
 		public float FlattenThreshold = 0.1f;
+		public Texture2D ColorTexture;
 
 		//[Tooltip("Center of rotation and scale")] public float3 Pivot = float3.zero;
 		[Tooltip("Vertex offset from pivot")] public float3 Translation = float3.zero;

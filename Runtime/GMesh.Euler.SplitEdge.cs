@@ -8,6 +8,59 @@ namespace CodeSmile.GraphMesh
 {
 	public sealed partial class GMesh
 	{
+		public int SplitEdgeAtVertex(int splitEdgeIndex, int splitVertexIndex)
+		{
+			var splitEdge = GetEdge(splitEdgeIndex);
+			var splitVertex = GetVertex(splitVertexIndex);
+			return SplitEdgeAtVertex(ref splitEdge, ref splitVertex);
+		}
+
+		/// <summary>
+		/// Test splitting at existing vertex - this needs more work / test cases.
+		/// </summary>
+		/// <param name="splitEdge"></param>
+		/// <param name="splitVertex"></param>
+		/// <returns></returns>
+		/// <exception cref="Exception"></exception>
+		public int SplitEdgeAtVertex(ref Edge splitEdge, ref Vertex splitVertex)
+		{
+			if (splitEdge.IsValid == false || splitVertex.IsValid == false)
+				return UnsetIndex;
+
+			// prefer the vertex that's pointing to the split edge to remain with split edge
+			SplitEdgeInternal_GetVerticesPreferBaseEdgeVertex(splitEdge, out var keepVert, out var otherVert);
+
+			var insertedEdge = Edge.Create(splitVertex.Index, otherVert.Index);
+			AddEdge(ref insertedEdge);
+
+			// make new vertex point to new edge
+			if (splitVertex.BaseEdgeIndex == UnsetIndex)
+			{
+				splitVertex.BaseEdgeIndex = insertedEdge.Index;
+				SetVertex(splitVertex);
+			}
+
+			// in case both edge vertices' BaseEdge point to the splitEdge
+			SplitEdgeInternal_UpdateOtherVertexBaseEdgeIfNeeded(ref otherVert, splitEdge.Index, insertedEdge.Index);
+			// replace split edge in disk cycle where inserted edge took its place
+			SplitEdgeInternal_ReplaceEdgeInDiskCycle(otherVert.Index, splitEdge, in insertedEdge);
+			// connect the two edges together at the new vertex
+			SplitEdgeInternal_ReconnectEdges(ref splitEdge, ref insertedEdge, splitVertex.Index, keepVert.Index, otherVert.Index);
+			// Split and insert loops (one or both, depends on whether it is a border edge)
+			SplitEdgeInternal_CreateAndInsertLoops(ref splitEdge, ref insertedEdge, splitVertex.Index);
+
+			// write edges to graph
+			SetEdge(insertedEdge);
+			SetEdge(splitEdge);
+
+#if GMESH_VALIDATION
+			if (ValidateVertexDiskCycle(keepVert, out var issue) == false) throw new Exception(issue);
+			if (ValidateVertexDiskCycle(otherVert, out var issue2) == false) throw new Exception(issue2);
+#endif
+
+			return insertedEdge.Index;
+		}
+
 		/// <summary>
 		/// Splits an edge at its center. Adds a new vertex and updates face loops.
 		/// </summary>

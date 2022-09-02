@@ -2,6 +2,7 @@ using CodeSmile;
 using CodeSmile.GraphMesh;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
@@ -25,8 +26,13 @@ public class GMeshTestBehaviour : MonoBehaviour
 	[Range(0, 9)] [SerializeField] private int _edgeTesselation;
 
 	[Header("Debug")]
-	public bool _logToConsole;
-	public GMesh.DebugDraw _debugDraw = 0;
+	[SerializeField] private bool _logToConsole;
+	[SerializeField] private bool _logAsSingleLine;
+	[SerializeField] private GMesh.DebugDraw _debugDraw = 0;
+	[Range(6, 24)] [SerializeField] private int _debugLabelFontSize = 12;
+
+	[Header("Manual Changes")]
+	[SerializeField] private List<SplitEdgeData> _splitEdges;
 
 	private int _prevTriangulationApproach;
 	private int _prevVertexCount;
@@ -51,7 +57,7 @@ public class GMeshTestBehaviour : MonoBehaviour
 		if (_gMesh == null)
 			return;
 
-		_gMesh.DebugDrawGizmos(transform, _debugDraw);
+		_gMesh.DebugDrawGizmos(transform, _debugDraw, _debugLabelFontSize);
 	}
 
 	private void OnValidate()
@@ -92,15 +98,25 @@ public class GMeshTestBehaviour : MonoBehaviour
 		DisposeGMesh();
 		_gMesh = CreatePrimitive();
 
-		for (var t = 0; t < _edgeTesselation; t++)
+		if (_primitiveType != PrimitiveType.VoxPlane)
 		{
-			var edgeCount = _gMesh.ValidEdgeCount;
-			for (var i = 0; i < edgeCount; i++)
-				_gMesh.SplitEdgeAndCreateVertex(i);
+			for (var t = 0; t < _edgeTesselation; t++)
+			{
+				var edgeCount = _gMesh.ValidEdgeCount;
+				for (var i = 0; i < edgeCount; i++)
+					_gMesh.SplitEdgeAndCreateVertex(i);
+			}
+		}
+		else
+		{
+			foreach (var split in _splitEdges)
+			{
+				_gMesh.SplitEdgeAtVertex(split.EdgeIndex, split.ExistingVertexIndex);
+			}
 		}
 
 		if (_logToConsole)
-			_gMesh.DebugLogAllElements();
+			_gMesh.DebugLogAllElements("", _logAsSingleLine);
 
 #if GMESH_VALIDATION
 		_gMesh.ValidateFaces();
@@ -146,6 +162,13 @@ public class GMeshTestBehaviour : MonoBehaviour
 		_ => throw new NotSupportedException(_primitiveType.ToString()),
 	};
 
+	[Serializable]
+	private struct SplitEdgeData
+	{
+		public int EdgeIndex;
+		public int ExistingVertexIndex;
+	}
+	
 	private enum PrimitiveType
 	{
 		Triangle,
